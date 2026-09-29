@@ -1,0 +1,4938 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>LOOPLAB · PID Workbench</title>
+    <style>
+      :root {
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        color-scheme: dark;
+        --bg: #101719;
+        --panel: #1b2528;
+        --raised: #233034;
+        --ink: #ecf1e7;
+        --muted: #acbcb7;
+        --line: #415553;
+        --accent: #d4ef7b;
+        --accentInk: #172117;
+        --chart: #101d21;
+        --shadow: 0 10px 25px #0002;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-padding-top: 90px;
+      }
+      body {
+        margin: 0;
+        color: var(--ink);
+        background: var(--bg);
+      }
+      body.light {
+        color-scheme: light;
+        --bg: #e8e8df;
+        --panel: #fffef5;
+        --raised: #f1f1e6;
+        --ink: #203331;
+        --muted: #526663;
+        --line: #9aaba2;
+        --accent: #466520;
+        --accentInk: #fff;
+        --shadow: 0 7px 20px #24322c12;
+      }
+      body.contrast {
+        color-scheme: dark;
+        --bg: #000;
+        --panel: #000;
+        --raised: #080808;
+        --ink: #fff;
+        --muted: #fff;
+        --line: #fff;
+        --accent: #ff0;
+        --accentInk: #000;
+      }
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+      button,
+      select,
+      input[type="number"] {
+        border: 1px solid var(--line);
+        background: var(--raised);
+        color: var(--ink);
+        border-radius: 6px;
+        min-height: 40px;
+        padding: 8px 11px;
+      }
+      button {
+        cursor: pointer;
+        font-size: 0.86rem;
+        font-weight: 600;
+      }
+      button:hover {
+        border-color: var(--accent);
+        background: var(--panel);
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      button.primary {
+        background: var(--accent);
+        color: var(--accentInk);
+        border-color: var(--accent);
+        min-width: 105px;
+      }
+      button.primary:hover {
+        filter: brightness(1.08);
+      }
+      :focus-visible {
+        outline: 3px solid var(--accent);
+        outline-offset: 3px;
+      }
+      [hidden] {
+        display: none !important;
+      }
+      header {
+        padding: 16px 24px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+        border-bottom: 1px solid var(--line);
+        background: var(--panel);
+      }
+      h1 {
+        margin: 0;
+        font-size: 1.35rem;
+        letter-spacing: 0.09em;
+      }
+      h2 {
+        font-size: 0.93rem;
+        margin: 0 0 12px;
+        letter-spacing: 0.02em;
+      }
+      small,
+      .hint {
+        color: var(--muted);
+      }
+      .badge {
+        font-size: 0.67rem;
+        letter-spacing: 0.09em;
+        color: var(--muted);
+        border: 1px solid var(--line);
+        padding: 6px 9px;
+        border-radius: 4px;
+      }
+      .spacer {
+        flex: 1;
+      }
+      .status {
+        font-size: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+      #led {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--accent);
+        display: inline-block;
+      }
+      header #theme {
+        font-size: 0.78rem;
+        min-height: 34px;
+        padding: 6px;
+      }
+      header > .hint {
+        font-size: 0.82rem;
+      }
+      .layout {
+        max-width: 1550px;
+        margin: auto;
+        padding: 18px 22px;
+        display: grid;
+        grid-template-columns: 290px minmax(0, 1fr);
+        grid-template-areas: "notice notice" "setup setup" "transport transport" "tune stage" "tune response" "tune baseline" "tune experiments" "tune inspector" "footer footer";
+        gap: 14px 18px;
+        align-items: start;
+      }
+      .setup {
+        grid-area: setup;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        position: relative;
+        z-index: 7;
+      }
+      .modelPicker {
+        flex: 0 0 290px;
+        display: grid;
+        gap: 5px;
+      }
+      .modelPicker label {
+        font-size: 0.64rem;
+        letter-spacing: 0.18em;
+        color: var(--muted);
+        font-weight: 750;
+      }
+      .modelPicker select {
+        font-size: 1rem;
+        font-weight: 650;
+        width: 100%;
+      }
+      .setup p {
+        flex: 1;
+        font-size: 0.83rem;
+        line-height: 1.5;
+        margin: 0;
+        color: var(--muted);
+        max-width: 630px;
+      }
+      .setup > button {
+        white-space: nowrap;
+      }
+      .projectMenu {
+        position: relative;
+        border: 0;
+        padding: 0;
+      }
+      .projectMenu summary {
+        border: 1px solid var(--line);
+        padding: 11px;
+        border-radius: 6px;
+        font-size: 0.86rem;
+        white-space: nowrap;
+      }
+      .projectItems {
+        position: absolute;
+        right: 0;
+        top: 48px;
+        padding: 8px;
+        display: grid;
+        gap: 4px;
+        min-width: 190px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+        z-index: 15;
+      }
+      .projectItems button {
+        text-align: left;
+      }
+      .transport {
+        grid-area: transport;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        padding: 10px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        position: sticky;
+        top: 8px;
+        z-index: 6;
+        box-shadow: var(--shadow);
+      }
+      .clock {
+        display: grid;
+        gap: 2px;
+        min-width: 145px;
+        margin: auto 12px;
+        font-variant-numeric: tabular-nums;
+        text-align: center;
+      }
+      .clock strong {
+        font-size: 0.77rem;
+        font-weight: 650;
+      }
+      .clock span {
+        font:
+          12px ui-monospace,
+          monospace;
+        color: var(--muted);
+      }
+      .speedLabel {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.77rem;
+        color: var(--muted);
+      }
+      .speedLabel select {
+        min-height: 38px;
+        padding: 6px 8px;
+        font-size: 0.8rem;
+      }
+      .panel {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        border-radius: 10px;
+        padding: 15px;
+        box-shadow: var(--shadow);
+        min-width: 0;
+      }
+      .controls {
+        grid-area: tune;
+        padding: 0;
+        align-self: start;
+        overflow: hidden;
+      }
+      .controls > summary {
+        padding: 14px 15px;
+        border-bottom: 1px solid var(--line);
+        font-size: 0.9rem;
+      }
+      .controls > summary span {
+        display: none;
+      }
+      .tuningContent {
+        padding: 0 15px 14px;
+      }
+      .microcopy {
+        font-size: 0.75rem;
+        line-height: 1.5;
+        color: var(--muted);
+        margin: 13px 0 17px;
+      }
+      .control {
+        display: grid;
+        gap: 7px;
+        margin: 0 0 16px;
+      }
+      .control > .labelrow {
+        display: flex;
+        gap: 7px;
+        align-items: center;
+        min-width: 0;
+      }
+      .labelrow label {
+        font-size: 0.85rem;
+        font-weight: 700;
+        flex: 1;
+      }
+      .control output {
+        font:
+          650 17px ui-monospace,
+          monospace;
+        color: var(--accent);
+      }
+      .control input[type="number"] {
+        width: 68px;
+        font:
+          14px ui-monospace,
+          monospace;
+        padding: 5px 7px;
+        min-height: 33px;
+      }
+      .control small {
+        font-size: 0.72rem;
+        line-height: 1.45;
+      }
+      .control input[type="range"] {
+        width: 100%;
+        min-width: 0;
+        margin: 0;
+        height: 26px;
+        accent-color: var(--accent);
+      }
+      input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--accent);
+        vertical-align: middle;
+        flex: 0 0 auto;
+      }
+      .knobWrap {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .knobWrap input {
+        flex: 1;
+      }
+      .knobFace {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        flex: 0 0 44px;
+        background: repeating-conic-gradient(
+          #52615b 0deg 8deg,
+          #273a36 8deg 16deg
+        );
+        border: 3px solid #adbdad;
+        box-shadow:
+          0 4px 6px #0007,
+          inset 0 0 0 4px #182b28;
+        position: relative;
+        touch-action: none;
+        cursor: ns-resize;
+      }
+      .knobFace:after {
+        content: "";
+        position: absolute;
+        width: 3px;
+        height: 13px;
+        background: #d6f578;
+        left: 18px;
+        top: 4px;
+        transform-origin: 1.5px 15px;
+        transform: rotate(var(--angle, -135deg));
+      }
+      summary {
+        cursor: pointer;
+        font-weight: 650;
+      }
+      details#advancedPanel {
+        border-top: 1px solid var(--line);
+        padding-top: 12px;
+        font-size: 0.82rem;
+      }
+      fieldset {
+        padding: 12px 0 0;
+        margin: 16px 0;
+        border: 0;
+        border-top: 1px solid var(--line);
+        min-width: 0;
+      }
+      legend {
+        font-size: 0.7rem;
+        font-weight: 750;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: var(--muted);
+        padding-right: 8px;
+      }
+      #eventControls > label {
+        display: block;
+        margin-bottom: 15px;
+        font-size: 0.8rem;
+      }
+      .note {
+        font-size: 0.78rem;
+        line-height: 1.5;
+        color: var(--muted);
+      }
+      .stage {
+        grid-area: stage;
+        background: var(--raised);
+      }
+      .stage h2 {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .stage h2 small {
+        font-size: 0.78rem;
+      }
+      .machine {
+        width: 100%;
+        border: 1px solid #556c67;
+        border-radius: 8px;
+        background: #142325;
+        overflow: hidden;
+      }
+      .machine svg {
+        width: 100%;
+        height: auto;
+        display: block;
+        max-height: 310px;
+      }
+      .instrumentReadouts {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 7px;
+        margin-top: 10px;
+      }
+      .instrumentReadouts > div {
+        padding: 8px;
+        background: #101e1b;
+        border: 1px solid #4d675e;
+        border-radius: 5px;
+        min-width: 0;
+        color: #d6f578;
+      }
+      .instrumentReadouts span {
+        font:
+          9px ui-monospace,
+          monospace;
+        letter-spacing: 0.035em;
+        color: #b7d0c0;
+        display: block;
+        min-height: 20px;
+      }
+      .instrumentReadouts strong {
+        font:
+          18px ui-monospace,
+          monospace;
+        display: block;
+        white-space: nowrap;
+      }
+      #interpretation {
+        margin: 10px 0 0;
+        min-height: 20px;
+        color: var(--ink);
+        font-size: 0.78rem;
+      }
+      .response {
+        grid-area: response;
+      }
+      .response > .note {
+        margin: 0 0 10px;
+      }
+      .chart {
+        width: 100%;
+        height: 225px;
+        display: block;
+        border: 1px solid #506762;
+        border-radius: 5px;
+        background: #111b1e;
+      }
+      .legend {
+        display: flex;
+        gap: 10px 15px;
+        flex-wrap: wrap;
+        background: #111b1e;
+        color: #dceae6;
+        padding: 10px 12px;
+        font-size: 0.68rem;
+        border-radius: 0 0 5px 5px;
+      }
+      .legend i {
+        display: inline-block;
+        width: 18px;
+        height: 3px;
+        vertical-align: middle;
+        margin-right: 5px;
+      }
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .metric {
+        padding: 8px 9px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+      }
+      .metric strong {
+        display: block;
+        font:
+          600 15px ui-monospace,
+          monospace;
+      }
+      .metric span {
+        display: block;
+        font-size: 0.66rem;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+      .baselineNote {
+        grid-area: baseline;
+        font-size: 0.72rem;
+        line-height: 1.45;
+        color: var(--muted);
+        margin: 0;
+      }
+      .inspector {
+        grid-area: inspector;
+        padding: 0;
+      }
+      .inspector > summary {
+        padding: 14px 16px;
+        font-size: 0.9rem;
+      }
+      .inspector > summary span {
+        font-weight: 400;
+        font-size: 0.76rem;
+        color: var(--muted);
+        margin-left: 8px;
+      }
+      .inspectorContent {
+        padding: 0 15px 15px;
+      }
+      .terms {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
+      .term {
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        display: grid;
+        gap: 8px;
+        min-width: 0;
+      }
+      .term label {
+        font-weight: 650;
+        font-size: 0.8rem;
+      }
+      .term strong {
+        font:
+          22px ui-monospace,
+          monospace;
+      }
+      .term meter {
+        width: 100%;
+        height: 12px;
+      }
+      .term small {
+        font-size: 0.7rem;
+      }
+      .termSummary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        font-size: 0.78rem;
+        padding-top: 12px;
+        font-variant-numeric: tabular-nums;
+      }
+      #termChart {
+        height: 210px;
+      }
+      .notice {
+        grid-area: notice;
+        background: var(--raised);
+        border: 1px solid var(--accent);
+        border-radius: 7px;
+        padding: 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.84rem;
+      }
+      #noticeText {
+        flex: 1;
+      }
+      #dismissNotice {
+        border: 0;
+        background: transparent;
+        font-size: 20px;
+      }
+      footer {
+        grid-area: footer;
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 5px;
+        padding: 12px 0;
+        border-top: 1px solid var(--line);
+        font-size: 0.64rem;
+        letter-spacing: 0.045em;
+        color: var(--muted);
+      }
+      @media (min-width: 1450px) {
+        .layout {
+          grid-template-columns: 310px minmax(0, 1fr);
+        }
+        .modelPicker {
+          flex-basis: 310px;
+        }
+      }
+      @media (max-width: 1000px) {
+        .layout {
+          grid-template-columns: 255px minmax(0, 1fr);
+          padding: 14px;
+          gap: 12px;
+        }
+        .modelPicker {
+          flex-basis: 255px;
+        }
+        .setup p {
+          display: none;
+        }
+        .setup > button {
+          margin-left: auto;
+        }
+        .instrumentReadouts {
+          grid-template-columns: repeat(3, 1fr);
+        }
+        .instrumentReadouts span {
+          min-height: 0;
+          margin-bottom: 5px;
+        }
+        .clock {
+          min-width: 100px;
+          margin: auto 5px;
+        }
+      }
+      @media (max-width: 760px) {
+        header {
+          padding: 12px 14px;
+          gap: 10px;
+        }
+        header > .hint,
+        header > .spacer {
+          display: none;
+        }
+        header h1 {
+          font-size: 1.06rem;
+        }
+        .badge {
+          font-size: 0.56rem;
+          padding: 5px;
+        }
+        header .status {
+          margin-left: auto;
+        }
+        header #theme {
+          font-size: 0.72rem;
+        }
+        .layout {
+          grid-template-columns: minmax(0, 1fr);
+          grid-template-areas: "notice" "setup" "transport" "tune" "stage" "response" "baseline" "experiments" "inspector" "footer";
+          gap: 10px;
+          padding: 12px;
+        }
+        .setup {
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        .modelPicker {
+          flex-basis: 100%;
+        }
+        .modelPicker label {
+          display: none;
+        }
+        .modelPicker select {
+          font-size: 0.95rem;
+        }
+        .setup > button {
+          margin-left: 0;
+          flex: 1;
+        }
+        .projectMenu {
+          flex: 0 0 95px;
+        }
+        .projectMenu summary {
+          text-align: center;
+        }
+        .transport {
+          flex-wrap: wrap;
+          gap: 6px;
+          padding: 8px;
+          top: 5px;
+        }
+        .transport button {
+          min-height: 39px;
+          font-size: 0.75rem;
+          padding: 7px 10px;
+        }
+        #play {
+          min-width: 90px;
+        }
+        .clock {
+          margin-left: auto;
+          min-width: 95px;
+        }
+        .speedLabel {
+          font-size: 0;
+        }
+        .speedLabel select {
+          font-size: 0.78rem;
+        }
+        #baseline,
+        #disturb {
+          flex: 1;
+        }
+        .controls > summary {
+          padding: 12px;
+          display: list-item;
+        }
+        .controls > summary span {
+          display: block;
+          font:
+            11px ui-monospace,
+            monospace;
+          color: var(--muted);
+          margin: 6px 0 0 15px;
+        }
+        .stage,
+        .response {
+          padding: 11px;
+        }
+        .stage h2 {
+          font-size: 0.85rem;
+        }
+        .stage h2 small {
+          font-size: 0.66rem;
+        }
+        .machine svg {
+          min-height: 150px;
+          max-height: none;
+        }
+        .instrumentReadouts {
+          gap: 5px;
+        }
+        .instrumentReadouts > div {
+          padding: 7px 6px;
+        }
+        .instrumentReadouts span {
+          font-size: 8px;
+          min-height: 18px;
+          margin: 0;
+        }
+        .instrumentReadouts strong {
+          font-size: 15px;
+        }
+        .metrics {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .legend {
+          font-size: 0.64rem;
+          gap: 8px 12px;
+        }
+        .chart {
+          height: 215px;
+        }
+        .terms {
+          grid-template-columns: 1fr;
+        }
+        .term {
+          grid-template-columns: 1fr 105px;
+        }
+        .term meter,
+        .term small {
+          grid-column: 1/-1;
+        }
+        .inspector > summary span {
+          display: block;
+          margin: 5px 0 0 15px;
+        }
+        footer {
+          font-size: 0.6rem;
+        }
+        .notice {
+          flex-wrap: wrap;
+        }
+        .notice > span {
+          flex-basis: 100%;
+        }
+        #noticeText {
+          font-size: 0.78rem;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          scroll-behavior: auto !important;
+        }
+      }
+      @media (min-width: 761px) {
+        .layout:has(#tuningPanel:not([open])) {
+          grid-template-columns: minmax(0, 1fr);
+          grid-template-areas: "notice" "setup" "transport" "tune" "stage" "response" "baseline" "experiments" "inspector" "footer";
+        }
+        .controls:not([open]) > summary span {
+          display: inline;
+          margin-left: 15px;
+          font:
+            12px ui-monospace,
+            monospace;
+          color: var(--muted);
+        }
+      }
+      .modeSwitch {
+        display: flex;
+        gap: 2px;
+        border: 1px solid var(--line);
+        padding: 3px;
+        border-radius: 8px;
+      }
+      .modeSwitch button {
+        min-height: 32px;
+        padding: 5px 10px;
+        border: 0;
+        background: transparent;
+        font-size: 0.76rem;
+      }
+      .modeSwitch button[aria-pressed="true"] {
+        background: var(--accent);
+        color: var(--accentInk);
+      }
+      body[data-mode="easy"] #advancedPanel,
+      body[data-mode="advanced"] #guidePanel {
+        display: none;
+      }
+      body[data-mode="advanced"] #tuningHelp {
+        display: none;
+      }
+      .learning {
+        background: var(--raised);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        margin-bottom: 18px;
+      }
+      .learning > summary {
+        padding: 10px;
+        font-size: 0.82rem;
+      }
+      .learningContent {
+        padding: 0 10px 12px;
+        display: grid;
+        gap: 10px;
+      }
+      .learningContent label {
+        font-size: 0.76rem;
+        font-weight: 650;
+      }
+      .learningContent select {
+        width: 100%;
+        min-width: 0;
+        font-size: 0.78rem;
+      }
+      .learningContent p {
+        margin: 0;
+        font-size: 0.78rem;
+        line-height: 1.5;
+        color: var(--muted);
+      }
+      .learningContent button {
+        width: 100%;
+      }
+      #customSetup {
+        border-left: 3px solid var(--accent);
+        padding-left: 10px;
+      }
+      .comparison {
+        margin-top: 14px;
+        border: 1px solid var(--line);
+        border-left: 3px solid var(--accent);
+        border-radius: 6px;
+        padding: 12px;
+      }
+      .comparison h3 {
+        margin: 0 0 6px;
+        font-size: 0.86rem;
+      }
+      .comparison p {
+        margin: 0;
+        font-size: 0.81rem;
+        line-height: 1.5;
+        color: var(--muted);
+      }
+      #controllerControls small {
+        line-height: 1.5;
+      }
+      #controllerControls > label {
+        display: block;
+        font-size: 0.8rem;
+        margin-bottom: 8px;
+      }
+      #controllerControls > small {
+        display: block;
+        margin-bottom: 14px;
+      }
+      .advancedScrollHint {
+        display: none;
+      }
+      @media (min-width: 761px) {
+        body[data-mode="advanced"] .tuningContent {
+          max-height: max(420px, calc(100vh - 260px));
+          overflow-y: auto;
+          scrollbar-gutter: stable;
+        }
+        body[data-mode="advanced"] .controls[open] > summary span {
+          display: block;
+          margin: 6px 0 0 15px;
+          font:
+            11px ui-monospace,
+            monospace;
+          color: var(--muted);
+        }
+        body[data-mode="advanced"] .advancedScrollHint {
+          display: block;
+          margin: 0;
+          padding: 10px 15px;
+          border-top: 1px solid var(--line);
+          font-size: 0.68rem;
+          color: var(--muted);
+        }
+      }
+      @media (max-width: 1150px) {
+        header > .hint {
+          display: none;
+        }
+      }
+      @media (max-width: 760px) {
+        header {
+          display: grid;
+          grid-template-columns: auto 1fr auto;
+          gap: 8px;
+        }
+        header h1 {
+          grid-column: 1;
+        }
+        header .badge {
+          grid-column: 2/-1;
+          justify-self: start;
+        }
+        .modeSwitch {
+          grid-column: 1/3;
+          grid-row: 2;
+          justify-self: start;
+        }
+        header .status {
+          grid-column: 1/-1;
+          grid-row: 3;
+          font-size: 0.68rem;
+        }
+        header #theme {
+          grid-column: 3;
+          grid-row: 2;
+          margin-left: 0;
+          max-width: 135px;
+        }
+        .modeSwitch button {
+          min-height: 36px;
+        }
+      }
+      .experiments {
+        grid-area: experiments;
+        padding: 0;
+        overflow: hidden;
+      }
+      .experiments > summary {
+        padding: 14px 15px;
+        font-size: 0.9rem;
+      }
+      .experiments > summary span {
+        color: var(--muted);
+        font-size: 0.75rem;
+        margin-left: 8px;
+        font-weight: 400;
+      }
+      .experimentContent {
+        padding: 0 15px 16px;
+      }
+      .experimentForm {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: end;
+        gap: 8px;
+      }
+      .experimentForm label {
+        flex: 1 1 180px;
+        display: grid;
+        gap: 6px;
+        font-size: 0.78rem;
+        color: var(--muted);
+      }
+      .experiments input[type="text"] {
+        width: 100%;
+        min-width: 0;
+        color: var(--ink);
+        background: var(--raised);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 9px 10px;
+        font: inherit;
+      }
+      #experimentSaveHint {
+        min-height: 1.5em;
+      }
+      .experimentRow {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px 16px;
+        padding: 12px 0;
+        border-top: 1px solid var(--line);
+      }
+      .experimentRow input[type="text"] {
+        font-size: 0.86rem;
+        font-weight: 650;
+      }
+      .experimentRow p {
+        margin: 6px 0 0;
+        font-size: 0.73rem;
+        line-height: 1.5;
+        color: var(--muted);
+      }
+      .experimentActions {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        flex-wrap: wrap;
+      }
+      .experimentActions label {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.78rem;
+      }
+      .experimentActions button {
+        min-height: 36px;
+        padding: 6px 9px;
+        font-size: 0.75rem;
+      }
+      .comparisonTable {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.75rem;
+        margin-top: 12px;
+      }
+      .comparisonTable caption {
+        text-align: left;
+        font-weight: 650;
+        margin: 4px 0 8px;
+      }
+      .comparisonTable th,
+      .comparisonTable td {
+        border-bottom: 1px solid var(--line);
+        text-align: right;
+        padding: 9px 8px;
+        white-space: nowrap;
+      }
+      .comparisonTable th:first-child,
+      .comparisonTable td:first-child {
+        text-align: left;
+        white-space: normal;
+        min-width: 115px;
+        max-width: 210px;
+        overflow-wrap: anywhere;
+      }
+      .comparisonTable thead {
+        color: var(--muted);
+      }
+      .tableScroll {
+        overflow-x: auto;
+      }
+      .mobileTableHint {
+        display: none;
+      }
+      #comparisonLegend {
+        margin-top: 6px;
+      }
+      #comparisonLegend > span {
+        overflow-wrap: anywhere;
+      }
+      .sampleInspector {
+        margin-top: 14px;
+        padding: 0;
+      }
+      .sampleInspector > summary {
+        padding: 13px 0;
+      }
+      .sampleControls {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px 16px;
+      }
+      .sampleControls label {
+        flex: 1;
+        min-width: 160px;
+      }
+      .sampleControls output {
+        font:
+          600 15px ui-monospace,
+          monospace;
+      }
+      #sampleTime {
+        width: 100%;
+        min-height: 44px;
+        accent-color: var(--accent);
+      }
+      #sampleComparisons {
+        overflow-wrap: anywhere;
+      }
+      .sampleValues {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        margin: 8px 0;
+      }
+      .sampleValues > div {
+        padding: 10px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+      }
+      .sampleValues dt {
+        color: var(--muted);
+        font-size: 0.72rem;
+      }
+      .sampleValues dd {
+        margin: 5px 0 0;
+        font:
+          600 14px ui-monospace,
+          monospace;
+      }
+      .sampleActions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .checkpointNote {
+        max-width: 240px;
+        margin: 6px;
+        font-size: 0.72rem;
+        line-height: 1.5;
+        color: var(--muted);
+      }
+      #helpDialog {
+        width: min(680px, calc(100vw - 24px));
+        max-height: calc(100dvh - 32px);
+        padding: 22px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        color: var(--ink);
+        background: var(--panel);
+        box-shadow: 0 20px 90px #0008;
+        line-height: 1.55;
+      }
+      #helpDialog::backdrop {
+        background: #061013c9;
+      }
+      .helpHeading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+      .helpHeading h2 {
+        margin: 0;
+        font-size: 1.25rem;
+        text-transform: none;
+      }
+      #helpDialog h3 {
+        margin: 22px 0 8px;
+        font-size: 1rem;
+      }
+      #helpDialog p,
+      #helpDialog li {
+        font-size: 0.9rem;
+      }
+      #helpDialog li {
+        margin: 8px 0;
+      }
+      #helpDialog dl {
+        margin: 12px 0;
+      }
+      #helpDialog dt {
+        font-weight: 700;
+        margin-top: 10px;
+      }
+      #helpDialog dd {
+        margin: 0;
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+      .textButton {
+        background: none;
+        border: 0;
+        padding: 8px 0;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+      @media (max-width: 480px) {
+        html {
+          scroll-padding-top: 130px;
+        }
+        .sampleValues {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+      .traceKey {
+        width: 28px;
+        height: 12px;
+        flex: none;
+      }
+      @media (max-width: 760px) {
+        .experimentRow {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .experimentActions {
+          justify-content: space-between;
+        }
+        .experimentContent {
+          padding: 0 11px 12px;
+        }
+        .experimentForm > button {
+          width: 100%;
+        }
+        .mobileTableHint {
+          display: block;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>◉ LOOPLAB</h1>
+      <span class="badge">PID WORKBENCH · v1.0.0-rc.1</span
+      ><span class="hint">Tune a loop. Watch the machine respond.</span
+      ><span class="spacer"></span>
+      <div class="modeSwitch" role="group" aria-label="Workbench mode">
+        <button id="easyMode" aria-pressed="true">Easy</button>
+        <button id="advancedMode" aria-pressed="false">Advanced</button>
+      </div>
+      <span class="status" aria-live="polite"
+        ><i id="led"></i><span id="save">Ready</span></span
+      ><select id="theme" aria-label="Color theme">
+        <option value="dark">Dark</option>
+        <option value="light">Light</option>
+        <option value="contrast">High contrast</option>
+      </select>
+    </header>
+    <main class="layout">
+      <div id="notice" class="notice" role="status" hidden>
+        <span id="noticeText"></span
+        ><button id="recovery" hidden>Download recovery copy</button
+        ><button id="dismissNotice" aria-label="Dismiss message">×</button>
+      </div>
+      <section class="setup" aria-label="Experiment setup">
+        <div class="modelPicker">
+          <label for="plant">THE SYSTEM</label
+          ><select id="plant" aria-label="Physical system" style="width: 100%">
+            <option value="cart">Motorized cart</option>
+            <option value="heater">Thermal chamber</option>
+            <option value="tank">Water tank</option>
+            <option value="motor">Motor &amp; flywheel</option>
+            <option value="spring">Spring–mass–damper</option>
+          </select>
+        </div>
+        <p id="plantnote"></p>
+        <button id="starter">Starter tuning</button>
+        <details class="projectMenu" id="projectMenu">
+          <summary>Project</summary>
+          <div class="projectItems">
+            <button id="export">Export JSON</button
+            ><button id="importButton">Import JSON</button
+            ><button id="report">Print / PDF</button
+            ><button id="openHelp">Quick guide</button
+            ><button id="reset">Fresh start</button
+            ><button id="restoreCheckpoint" disabled>Restore checkpoint</button>
+            <p id="checkpointStatus" class="checkpointNote">
+              A checkpoint is kept before an import or Fresh start.
+            </p>
+            <input
+              type="file"
+              id="importFile"
+              accept="application/json,.json"
+              hidden
+            />
+          </div>
+        </details>
+      </section>
+      <div
+        class="transport"
+        role="group"
+        aria-label="Playback and experiment controls"
+      >
+        <button id="play" class="primary">▶ Replay</button
+        ><button
+          id="step"
+          title="Calculate a fresh complete response with the current settings"
+        >
+          Reset run</button
+        ><label class="speedLabel" for="speed"
+          >Speed
+          <select id="speed">
+            <option value="0.5">½×</option>
+            <option value="1" selected>1×</option>
+            <option value="2">2×</option>
+            <option value="4">4×</option>
+          </select></label
+        >
+        <div class="clock">
+          <strong id="runState">Preview</strong
+          ><span id="runTime">24.0 / 24.0 s</span>
+        </div>
+        <button id="baseline">Pin baseline</button
+        ><button id="disturb">Apply load</button>
+      </div>
+      <details class="panel controls" id="tuningPanel" open>
+        <summary>Controller settings <span id="tuneSummary"></span></summary>
+        <div
+          class="tuningContent"
+          tabindex="0"
+          role="region"
+          aria-label="Controller adjustment controls"
+        >
+          <p class="microcopy">
+            Adjust a gain and compare the response. During playback, changes act
+            on the running machine.
+            <button id="tuningHelp" class="textButton">
+              How to use this bench
+            </button>
+          </p>
+          <details id="guidePanel" class="learning" open>
+            <summary>Guided comparisons</summary>
+            <div class="learningContent">
+              <label for="lessonSelect">Explore one effect</label>
+              <select id="lessonSelect">
+                <option value="p">P · A stronger push</option>
+                <option value="i">I · Remove the offset</option>
+                <option value="d">D · Calm the motion</option>
+              </select>
+              <p id="lessonDescription"></p>
+              <button id="loadLesson">Load comparison</button>
+              <p>
+                Loads the named machine and replaces your setup and pinned
+                baseline. Replay, then try a gain.
+              </p>
+              <button id="undoLesson" hidden>Restore prior setup</button>
+            </div>
+          </details>
+          <p id="customSetup" class="note" hidden></p>
+          <div class="control" id="targetControl">
+            <div class="labelrow">
+              <label for="setpoint">Target</label
+              ><output id="setpointValue"></output>
+            </div>
+            <input
+              id="setpoint"
+              type="range"
+              min="10"
+              max="90"
+              step="1"
+              value="70"
+            /><small id="unitnote"></small>
+          </div>
+          <div id="knobs"></div>
+          <details id="advancedPanel">
+            <summary>Advanced settings</summary>
+            <div id="advanced">
+              <fieldset id="controllerControls">
+                <legend>Controller behavior</legend>
+                <label
+                  ><input type="checkbox" id="antiWindup" checked /> Hold
+                  integral at saturation</label
+                >
+                <small
+                  >Anti-windup prevents error from accumulating when it would
+                  push farther into a command limit. The memory cap still
+                  applies when this is off.</small
+                >
+              </fieldset>
+              <fieldset id="modelControls">
+                <legend>Physical system</legend>
+              </fieldset>
+              <fieldset id="sensorControls">
+                <legend>Feedback &amp; capacity</legend>
+              </fieldset>
+              <fieldset id="eventControls">
+                <legend>Timed disturbance</legend>
+                <label
+                  ><input type="checkbox" id="eventEnabled" /> Enable scheduled
+                  load</label
+                >
+              </fieldset>
+            </div>
+            <p id="eventStatus" class="note"></p>
+            <p id="modelAssumptions" class="note"></p>
+          </details>
+        </div>
+        <p class="advancedScrollHint">
+          Scroll controls for model, feedback &amp; loads ↓
+        </p>
+      </details>
+      <section class="panel stage" aria-label="Physical system">
+        <h2>Physical system <small id="systemLabel"></small></h2>
+        <div
+          class="machine"
+          id="machine"
+          role="img"
+          aria-label="Physical process visualization"
+        >
+          <svg
+            style="font-family: system-ui, sans-serif"
+            id="rig"
+            viewBox="0 0 900 350"
+            aria-hidden="true"
+          >
+            <defs>
+              <linearGradient id="steel" x2="0" y2="1">
+                <stop stop-color="#c9d3d0" />
+                <stop offset=".35" stop-color="#677e80" />
+                <stop offset=".55" stop-color="#d6dfd9" />
+                <stop offset="1" stop-color="#384b50" />
+              </linearGradient>
+              <linearGradient id="case" x2="0" y2="1">
+                <stop stop-color="#46615c" />
+                <stop offset="1" stop-color="#192b2a" />
+              </linearGradient>
+              <linearGradient id="glass" x2="1" y2="1">
+                <stop stop-color="#a0e8ef" stop-opacity=".25" />
+                <stop offset="1" stop-color="#121f25" stop-opacity=".9" />
+              </linearGradient>
+              <pattern
+                id="thread"
+                width="16"
+                height="20"
+                patternUnits="userSpaceOnUse"
+              >
+                <rect width="16" height="20" fill="#657779" />
+                <path
+                  d="M0 20L10 0M8 20L18 0"
+                  stroke="#d0d9d3"
+                  stroke-width="4"
+                />
+              </pattern>
+            </defs>
+            <rect
+              x="6"
+              y="6"
+              width="888"
+              height="338"
+              rx="12"
+              fill="#142325"
+              stroke="#5d7674"
+              stroke-width="2"
+            />
+            <g fill="#8a9e97" stroke="#0d1c1d" stroke-width="3">
+              <circle cx="20" cy="20" r="5" />
+              <circle cx="880" cy="20" r="5" />
+              <circle cx="20" cy="330" r="5" />
+              <circle cx="880" cy="330" r="5" />
+            </g>
+            <g id="cartScene">
+              <path
+                d="M690 148H90V161"
+                stroke="#ff9a59"
+                stroke-width="3"
+                fill="none"
+              />
+              <text x="36" y="42" fill="#d5e7df" font-size="15">
+                SERVO POSITIONING STAGE
+              </text>
+              <rect
+                x="155"
+                y="244"
+                width="615"
+                height="28"
+                rx="7"
+                fill="url(#steel)"
+              />
+              <rect
+                x="155"
+                y="167"
+                width="615"
+                height="13"
+                rx="6"
+                fill="url(#steel)"
+              />
+              <rect
+                x="155"
+                y="221"
+                width="615"
+                height="13"
+                rx="6"
+                fill="url(#steel)"
+              />
+              <rect
+                id="leadScrew"
+                x="144"
+                y="196"
+                width="640"
+                height="18"
+                rx="5"
+                fill="url(#thread)"
+              />
+              <rect
+                x="40"
+                y="162"
+                width="105"
+                height="87"
+                rx="12"
+                fill="url(#case)"
+                stroke="#a3b7ac"
+                stroke-width="3"
+              />
+              <path
+                d="M54 173V236M64 173V236M74 173V236M84 173V236"
+                stroke="#6e8780"
+                stroke-width="5"
+              />
+              <text x="41" y="277" fill="#b5cdc7" font-size="13">DC MOTOR</text>
+              <circle
+                cx="116"
+                cy="205"
+                r="20"
+                fill="url(#steel)"
+                stroke="#101b1e"
+                stroke-width="4"
+              />
+              <g id="rotor">
+                <path
+                  d="M103 205H129M116 192V218"
+                  stroke="#172b2e"
+                  stroke-width="5"
+                />
+              </g>
+              <g id="carriage">
+                <rect
+                  x="-37"
+                  y="152"
+                  width="74"
+                  height="93"
+                  rx="7"
+                  fill="url(#steel)"
+                  stroke="#112325"
+                  stroke-width="3"
+                />
+                <rect
+                  x="-27"
+                  y="165"
+                  width="54"
+                  height="29"
+                  rx="4"
+                  fill="#f0b649"
+                />
+                <text
+                  x="0"
+                  y="184"
+                  text-anchor="middle"
+                  fill="#182a2b"
+                  font-size="11"
+                  font-weight="bold"
+                >
+                  PAYLOAD
+                </text>
+                <circle cx="-24" cy="228" r="5" fill="#263b3d" />
+                <circle cx="24" cy="228" r="5" fill="#263b3d" />
+              </g>
+              <g id="targetMarker">
+                <path
+                  d="M0 96V265"
+                  stroke="#d6f578"
+                  stroke-width="2"
+                  stroke-dasharray="5 4"
+                />
+                <path d="M-8 95H8L0 107Z" fill="#d6f578" />
+                <text
+                  x="0"
+                  y="86"
+                  fill="#d6f578"
+                  text-anchor="middle"
+                  font-size="12"
+                >
+                  TARGET
+                </text>
+              </g>
+              <g fill="#b5cdc7" font-size="12">
+                <text x="175" y="293">0%</text>
+                <text x="450" y="293">50%</text>
+                <text x="737" y="293">100%</text>
+              </g>
+              <rect
+                x="795"
+                y="181"
+                width="64"
+                height="46"
+                rx="5"
+                fill="#c78938"
+                stroke="#ebd19d"
+              />
+              <circle id="sensorLed" cx="813" cy="194" r="4" fill="#c8f267" />
+              <text
+                x="827"
+                y="214"
+                fill="#182b2b"
+                text-anchor="middle"
+                font-size="10"
+              >
+                ENCODER
+              </text>
+              <path
+                d="M770 205H795M825 181V120H671"
+                fill="none"
+                stroke="#51d8ee"
+                stroke-width="3"
+              />
+            </g>
+            <g id="heaterScene" style="display: none">
+              <path
+                d="M846 148V327H105V254"
+                stroke="#ff9a59"
+                stroke-width="3"
+                fill="none"
+              />
+              <text x="36" y="42" fill="#d5e7df" font-size="15">
+                THERMAL CHAMBER · HEAT / COOL
+              </text>
+              <rect
+                x="46"
+                y="68"
+                width="488"
+                height="244"
+                rx="16"
+                fill="url(#steel)"
+                stroke="#819997"
+                stroke-width="3"
+              />
+              <rect
+                x="69"
+                y="87"
+                width="443"
+                height="202"
+                rx="12"
+                fill="#122124"
+                stroke="#1c3034"
+                stroke-width="8"
+              />
+              <rect
+                id="heatGlow"
+                x="78"
+                y="96"
+                width="425"
+                height="184"
+                rx="8"
+                fill="#ff733e"
+                opacity="0"
+              />
+              <rect
+                x="78"
+                y="96"
+                width="425"
+                height="184"
+                rx="8"
+                fill="url(#glass)"
+              />
+              <rect
+                x="206"
+                y="132"
+                width="100"
+                height="71"
+                rx="5"
+                fill="url(#steel)"
+              />
+              <text
+                x="256"
+                y="174"
+                text-anchor="middle"
+                fill="#192d2e"
+                font-size="13"
+              >
+                THERMAL MASS
+              </text>
+              <path
+                id="coil"
+                d="M106 251V226Q118 211 130 226V251Q142 265 154 251V226Q166 211 178 226V251Q190 265 202 251V226Q214 211 226 226V251Q238 265 250 251V226Q262 211 274 226V251Q286 265 298 251V226Q310 211 322 226V251"
+                fill="none"
+                stroke="#a26846"
+                stroke-width="7"
+              />
+              <circle
+                cx="410"
+                cy="175"
+                r="58"
+                fill="#203639"
+                stroke="#9dafab"
+                stroke-width="5"
+              />
+              <g id="fan">
+                <path
+                  d="M410 175C354 161 368 118 399 129ZM410 175C432 121 473 147 452 171ZM410 175C449 214 411 244 395 216Z"
+                  fill="#8ca6a3"
+                />
+              </g>
+              <circle
+                cx="410"
+                cy="175"
+                r="11"
+                fill="#263a3b"
+                stroke="#cedad4"
+                stroke-width="3"
+              />
+              <text
+                x="410"
+                y="260"
+                text-anchor="middle"
+                fill="#ccded9"
+                font-size="12"
+              >
+                COOLING FAN
+              </text>
+              <rect
+                x="568"
+                y="92"
+                width="30"
+                height="171"
+                rx="15"
+                fill="#d9e0d7"
+                stroke="#7f9590"
+                stroke-width="4"
+              />
+              <rect
+                id="mercury"
+                x="578"
+                y="249"
+                width="10"
+                height="1"
+                rx="4"
+                fill="#e95744"
+              />
+              <circle
+                cx="583"
+                cy="267"
+                r="20"
+                fill="#e95744"
+                stroke="#d9e0d7"
+                stroke-width="5"
+              />
+              <path
+                id="tempTarget"
+                d="M608 150H630"
+                stroke="#d6f578"
+                stroke-width="4"
+              />
+              <g fill="#c6d9d1" font-size="12">
+                <text x="609" y="104">100</text>
+                <text x="609" y="186">50</text>
+                <text x="609" y="268">0</text>
+              </g>
+              <path
+                d="M500 112H653V120H671"
+                fill="none"
+                stroke="#51d8ee"
+                stroke-width="3"
+              />
+              <circle cx="500" cy="112" r="6" fill="#51d8ee" />
+              <text x="544" y="310" fill="#bed4cf" font-size="12">
+                TEMPERATURE SENSOR
+              </text>
+            </g>
+
+            <g id="tankScene" style="display: none">
+              <text x="36" y="42" fill="#d5e7df" font-size="15">
+                WATER LEVEL · PUMP &amp; GRAVITY DRAIN
+              </text>
+              <path
+                d="M128 210V77H335V110"
+                fill="none"
+                stroke="url(#steel)"
+                stroke-width="17"
+              />
+              <path
+                id="inletFlow"
+                d="M128 210V77H335V135"
+                fill="none"
+                stroke="#51d8ee"
+                stroke-width="6"
+                stroke-dasharray="8 7"
+              />
+              <rect
+                x="80"
+                y="210"
+                width="100"
+                height="69"
+                rx="10"
+                fill="url(#case)"
+                stroke="#9cafa5"
+                stroke-width="3"
+              />
+              <circle
+                cx="129"
+                cy="244"
+                r="25"
+                fill="url(#steel)"
+                stroke="#162c2c"
+                stroke-width="3"
+              />
+              <g id="pumpRotor">
+                <path
+                  d="M129 223V265M108 244H150"
+                  stroke="#1a3f43"
+                  stroke-width="7"
+                />
+              </g>
+              <text
+                x="130"
+                y="299"
+                text-anchor="middle"
+                fill="#c2dad2"
+                font-size="12"
+              >
+                FILL PUMP
+              </text>
+              <rect
+                x="280"
+                y="96"
+                width="238"
+                height="193"
+                rx="9"
+                fill="#0b1b21"
+                stroke="#9fb3af"
+                stroke-width="7"
+              />
+              <rect
+                id="tankWater"
+                x="285"
+                y="283"
+                width="228"
+                height="0"
+                fill="#249daf"
+                opacity=".7"
+              />
+              <path
+                id="waterSurface"
+                d="M286 283H512"
+                stroke="#8decf1"
+                stroke-width="3"
+              />
+              <path
+                d="M289 109V269"
+                stroke="#b9e7dd"
+                stroke-width="3"
+                opacity=".4"
+              />
+              <g fill="#b8d1c9" font-size="12">
+                <text x="528" y="109">100%</text>
+                <text x="528" y="198">50%</text>
+                <text x="528" y="287">0%</text>
+              </g>
+              <path
+                id="tankTarget"
+                d="M264 160H524"
+                stroke="#d6f578"
+                stroke-width="2"
+                stroke-dasharray="6 5"
+              />
+              <path
+                d="M518 267H595V303H638"
+                stroke="url(#steel)"
+                stroke-width="17"
+                fill="none"
+              />
+              <path
+                id="outletFlow"
+                d="M518 267H595V303H638"
+                stroke="#51d8ee"
+                stroke-width="5"
+                fill="none"
+                stroke-dasharray="8 7"
+              />
+              <path
+                d="M562 255L582 279V255L562 279Z"
+                fill="#c29854"
+                stroke="#e4c078"
+              />
+              <text x="646" y="307" fill="#c2dad2" font-size="12">
+                GRAVITY DRAIN
+              </text>
+              <rect
+                x="230"
+                y="150"
+                width="29"
+                height="58"
+                rx="5"
+                fill="#cb9c4a"
+              />
+              <text x="210" y="229" fill="#c2dad2" font-size="10">
+                LEVEL SENSOR
+              </text>
+              <path
+                d="M259 176H278M244 150V56H655V119H670"
+                stroke="#51d8ee"
+                stroke-width="3"
+                fill="none"
+              />
+              <path
+                d="M846 148V323H85V279"
+                stroke="#ff9a59"
+                stroke-width="3"
+                fill="none"
+              />
+              <text
+                id="tankCondition"
+                x="295"
+                y="321"
+                fill="#d6f578"
+                font-size="12"
+              >
+                FILLING
+              </text>
+            </g>
+            <g id="motorScene" style="display: none">
+              <text x="36" y="42" fill="#d5e7df" font-size="15">
+                SPEED CONTROL · FLYWHEEL &amp; BRAKE
+              </text>
+              <rect
+                x="66"
+                y="284"
+                width="507"
+                height="20"
+                rx="5"
+                fill="url(#steel)"
+              />
+              <rect
+                x="82"
+                y="153"
+                width="132"
+                height="97"
+                rx="12"
+                fill="url(#case)"
+                stroke="#9cafa5"
+                stroke-width="3"
+              />
+              <path
+                d="M96 163V240M109 163V240M122 163V240M135 163V240"
+                stroke="#64817a"
+                stroke-width="6"
+              />
+              <rect
+                x="214"
+                y="192"
+                width="224"
+                height="15"
+                rx="5"
+                fill="url(#steel)"
+              />
+              <rect x="134" y="250" width="30" height="34" fill="url(#steel)" />
+              <rect x="365" y="240" width="30" height="44" fill="url(#steel)" />
+              <circle
+                cx="381"
+                cy="199"
+                r="79"
+                fill="url(#steel)"
+                stroke="#a9beb5"
+                stroke-width="5"
+              />
+              <circle
+                cx="381"
+                cy="199"
+                r="62"
+                fill="#20383a"
+                stroke="#101e21"
+                stroke-width="6"
+              />
+              <g id="flywheel">
+                <path
+                  d="M381 139V259M321 199H441M338 156L424 242M338 242L424 156"
+                  stroke="#a1b4af"
+                  stroke-width="9"
+                />
+                <circle cx="381" cy="199" r="20" fill="url(#steel)" />
+                <circle cx="381" cy="132" r="5" fill="#f7c24c" />
+              </g>
+              <path
+                d="M443 150H481V245H443"
+                stroke="#879890"
+                stroke-width="12"
+                fill="none"
+              />
+              <rect
+                id="brakePad"
+                x="451"
+                y="171"
+                width="13"
+                height="57"
+                rx="5"
+                fill="#5d5144"
+              />
+              <text
+                x="465"
+                y="272"
+                text-anchor="middle"
+                fill="#c2dad2"
+                font-size="12"
+              >
+                LOAD BRAKE
+              </text>
+              <text
+                x="142"
+                y="139"
+                text-anchor="middle"
+                fill="#c2dad2"
+                font-size="12"
+              >
+                DC DRIVE
+              </text>
+              <rect
+                x="519"
+                y="185"
+                width="62"
+                height="34"
+                rx="5"
+                fill="#cb9c4a"
+              />
+              <text
+                x="550"
+                y="206"
+                text-anchor="middle"
+                fill="#152829"
+                font-size="10"
+              >
+                TACH
+              </text>
+              <path
+                d="M519 201H462M550 185V118H670"
+                stroke="#51d8ee"
+                stroke-width="3"
+                fill="none"
+              />
+              <path
+                d="M846 148V322H66V200H82"
+                stroke="#ff9a59"
+                stroke-width="3"
+                fill="none"
+              />
+              <path
+                d="M570 273A72 72 0 0 1 714 273"
+                stroke="#496363"
+                stroke-width="12"
+                fill="none"
+              />
+              <path
+                id="speedNeedle"
+                d="M642 273L580 273"
+                stroke="#51d8ee"
+                stroke-width="4"
+              />
+              <path
+                id="speedTarget"
+                d="M573 273H561"
+                stroke="#d6f578"
+                stroke-width="4"
+              />
+              <circle cx="642" cy="273" r="6" fill="#d1e3d9" />
+              <text
+                x="642"
+                y="295"
+                fill="#c2dad2"
+                text-anchor="middle"
+                font-size="11"
+              >
+                0 — RATED SPEED — 100%
+              </text>
+            </g>
+            <g id="springScene" style="display: none">
+              <text x="36" y="42" fill="#d5e7df" font-size="15">
+                SPRING · MASS · DAMPER
+              </text>
+              <rect x="46" y="122" width="24" height="177" fill="url(#steel)" />
+              <path
+                d="M38 132L46 122M38 152L46 142M38 172L46 162M38 192L46 182M38 212L46 202M38 232L46 222M38 252L46 242M38 272L46 262M38 292L46 282"
+                stroke="#a4bcb2"
+                stroke-width="2"
+              />
+              <rect
+                x="72"
+                y="279"
+                width="701"
+                height="18"
+                rx="5"
+                fill="url(#steel)"
+              />
+              <path
+                id="springCoil"
+                d="M70 190H90L100 180L110 200L120 180L130 200L140 190H170"
+                fill="none"
+                stroke="#d8dfd6"
+                stroke-width="5"
+              />
+              <rect
+                x="92"
+                y="234"
+                width="60"
+                height="28"
+                rx="3"
+                fill="url(#steel)"
+                stroke="#9eb9af"
+              />
+              <path d="M70 248H92" stroke="#adc2b8" stroke-width="5" />
+              <path
+                id="damperRod"
+                d="M119 248H175"
+                stroke="#d4e1d7"
+                stroke-width="6"
+              />
+              <text x="95" y="157" fill="#c2dad2" font-size="11">SPRING</text>
+              <text x="95" y="319" fill="#c2dad2" font-size="11">
+                VISCOUS DAMPER
+              </text>
+              <g id="springMass">
+                <rect
+                  x="-32"
+                  y="167"
+                  width="88"
+                  height="105"
+                  rx="9"
+                  fill="url(#steel)"
+                  stroke="#263e3e"
+                  stroke-width="3"
+                />
+                <rect
+                  x="-24"
+                  y="178"
+                  width="72"
+                  height="36"
+                  rx="3"
+                  fill="#d3b05f"
+                />
+                <text
+                  x="12"
+                  y="201"
+                  text-anchor="middle"
+                  fill="#172c2d"
+                  font-size="12"
+                >
+                  MASS
+                </text>
+                <circle cx="-15" cy="272" r="10" fill="#223b3a" />
+                <circle cx="39" cy="272" r="10" fill="#223b3a" />
+                <path
+                  id="forceArrow"
+                  d="M-6 236H38L31 228M38 236L31 244"
+                  stroke="#ed9458"
+                  stroke-width="4"
+                  fill="none"
+                />
+              </g>
+              <path
+                id="springTarget"
+                d="M600 122V296"
+                stroke="#d6f578"
+                stroke-width="2"
+                stroke-dasharray="6 4"
+              />
+              <text x="472" y="317" fill="#c2dad2" font-size="11">
+                TRAVEL 0–100% · HARD END STOPS
+              </text>
+              <rect
+                x="795"
+                y="197"
+                width="62"
+                height="39"
+                rx="5"
+                fill="#cb9c4a"
+              />
+              <text
+                x="826"
+                y="221"
+                fill="#172c2d"
+                text-anchor="middle"
+                font-size="10"
+              >
+                POSITION
+              </text>
+              <path
+                d="M826 197V121H670"
+                fill="none"
+                stroke="#51d8ee"
+                stroke-width="3"
+              />
+              <path
+                d="M846 148V327H769V261"
+                fill="none"
+                stroke="#ff9a59"
+                stroke-width="3"
+              />
+              <text x="683" y="252" fill="#e9b476" font-size="10">
+                FORCE ACTUATOR
+              </text>
+            </g>
+            <g>
+              <rect
+                x="670"
+                y="45"
+                width="190"
+                height="91"
+                rx="9"
+                fill="#294338"
+                stroke="#a4b7a3"
+                stroke-width="2"
+              />
+              <path
+                d="M681 68H717V102H749M820 55V85H784"
+                stroke="#a1b46c"
+                stroke-width="3"
+                fill="none"
+              />
+              <rect
+                x="728"
+                y="66"
+                width="61"
+                height="41"
+                rx="3"
+                fill="#111c1b"
+                stroke="#829b80"
+              />
+              <text
+                x="758"
+                y="91"
+                text-anchor="middle"
+                fill="#d5e6da"
+                font-size="13"
+              >
+                PID
+              </text>
+              <circle id="driveLed" cx="839" cy="66" r="6" fill="#5e704e" />
+              <text x="684" y="125" fill="#d5e6da" font-size="10">
+                SENSOR → CONTROLLER → DRIVE
+              </text>
+              <path
+                d="M690 136V148H846"
+                stroke="#ff9a59"
+                stroke-width="3"
+                fill="none"
+              />
+            </g>
+          </svg>
+        </div>
+        <div class="instrumentReadouts">
+          <div>
+            <span id="readoutName">POSITION</span
+            ><strong id="readout">0%</strong>
+          </div>
+          <div><span>DRIVE COMMAND</span><strong id="effort">0%</strong></div>
+          <div>
+            <span>DELIVERED EFFORT</span><strong id="delivered">0%</strong>
+          </div>
+          <div>
+            <span>SENSOR FEEDBACK</span><strong id="sensorNow">0</strong>
+          </div>
+          <div><span>EXTERNAL LOAD</span><strong id="loadNow">0</strong></div>
+          <div>
+            <span id="motionName">VELOCITY</span
+            ><strong id="motionValue">0</strong>
+          </div>
+        </div>
+        <p class="note" id="interpretation"></p>
+      </section>
+      <section class="panel response" aria-label="Response chart">
+        <h2>Response recorder</h2>
+        <p class="hint note">
+          Normalized output (%) and drive command (%) versus time (s).
+        </p>
+        <canvas
+          id="chart"
+          class="chart"
+          aria-label="Target, actual output, sensor, controller effort, and comparison responses over time. Use Inspect a moment for numerical values."
+          role="img"
+        ></canvas>
+        <div class="legend">
+          <span><i style="background: #d6f578"></i>Target</span
+          ><span><i style="background: #51d8ee"></i>Actual output</span
+          ><span><i style="background: white"></i>Sensor · dotted</span
+          ><span><i style="background: #ff9a59"></i>Controller effort</span
+          ><span><i style="background: #e5b5f2"></i>Pinned baseline</span>
+        </div>
+        <div
+          id="comparisonLegend"
+          class="legend"
+          role="group"
+          hidden
+          aria-label="Saved response overlays"
+        ></div>
+        <div class="metrics">
+          <div class="metric">
+            <strong id="overshoot">—</strong><span>Overshoot</span>
+          </div>
+          <div class="metric">
+            <strong id="rise">—</strong><span>Rise time (10–90%)</span>
+          </div>
+          <div class="metric">
+            <strong id="settle">—</strong><span>Settling time (±2%)</span>
+          </div>
+          <div class="metric">
+            <strong id="error">—</strong><span>Current error</span>
+          </div>
+        </div>
+        <div id="lessonResult" class="comparison" hidden>
+          <h3 id="lessonResultTitle"></h3>
+          <p id="lessonResultText"></p>
+        </div>
+        <details id="sampleInspector" class="sampleInspector">
+          <summary>Inspect a moment</summary>
+          <div class="sampleControls">
+            <label for="sampleTime"
+              >Recorded time ·
+              <output id="sampleTimeValue" for="sampleTime" aria-live="off"
+                >24.00 s</output
+              >
+              <input
+                id="sampleTime"
+                type="range"
+                min="0"
+                max="1199"
+                step="1"
+                value="1199"
+                aria-describedby="sampleHelp"
+              />
+            </label>
+            <button id="latestSample">Follow latest</button>
+          </div>
+          <p id="sampleHelp" class="note">
+            Use arrow keys to move by 0.02 seconds, or tap the chart. Moving the
+            cursor pauses playback; the machine stays at its playback position.
+          </p>
+          <dl id="sampleValues" class="sampleValues"></dl>
+          <p id="sampleState" class="note"></p>
+          <p id="sampleComparisons" class="note"></p>
+          <p class="note">
+            Output is recorded at the end of each step. Sensor feedback and
+            controller contributions are from the start of that step.
+          </p>
+        </details>
+        <div class="sampleActions" role="group" aria-label="Recording exports">
+          <button id="exportCSV">Trace CSV</button>
+          <button id="exportPNG">Chart PNG</button>
+        </div>
+      </section>
+      <p class="baselineNote" id="baselineNote"></p>
+      <details class="panel experiments" id="experimentsPanel">
+        <summary>Experiments <span id="experimentCount">0 saved</span></summary>
+        <div class="experimentContent">
+          <p class="note">
+            Save a repeatable run, change the tuning, then compare. Keep up to
+            12 experiments and select up to four overlays. Edit a name to rename
+            it.
+          </p>
+          <form id="experimentForm" class="experimentForm">
+            <label for="experimentName"
+              >Name this run<input
+                type="text"
+                id="experimentName"
+                maxlength="60"
+                placeholder="e.g. Spring · gentle damping"
+                required
+                autocomplete="off"
+            /></label>
+            <button id="saveExperiment" type="submit">Save experiment</button>
+          </form>
+          <p class="note" id="experimentSaveHint"></p>
+          <div id="experimentList"></div>
+          <button id="undoDelete" hidden>Undo removal</button>
+          <p class="note mobileTableHint">
+            Swipe or scroll the table to see all columns.
+          </p>
+          <div
+            class="tableScroll"
+            tabindex="0"
+            role="region"
+            aria-label="Response comparison table"
+          >
+            <table class="comparisonTable">
+              <caption>
+                Selected responses ·
+                <span id="comparisonSystem"></span>
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Response</th>
+                  <th scope="col">Target</th>
+                  <th scope="col">Error</th>
+                  <th scope="col">Peak</th>
+                  <th scope="col">Overshoot</th>
+                  <th scope="col">Settling</th>
+                </tr>
+              </thead>
+              <tbody id="comparisonRows"></tbody>
+            </table>
+          </div>
+          <p class="note">
+            Error is absolute output error; peak is output, both in normalized
+            units. Only selected responses for the current system appear on the
+            plot and in the table. Targets, loads and other settings can differ;
+            these are comparisons, not rankings. Scheduled loads have no
+            step-response metrics.
+          </p>
+        </div>
+      </details>
+      <details class="panel inspector" id="inspector">
+        <summary>
+          Inside the controller <span>Contributions &amp; limiting</span>
+        </summary>
+        <div class="inspectorContent">
+          <p class="note">
+            Error = target − sensor feedback. Noise and sensor delay affect the
+            feedback while the physical scene shows the actual process. The
+            three contributions add together, then the drive command is clipped
+            to the selected actuator limit.
+          </p>
+          <div class="terms">
+            <div class="term">
+              <label> P · Present error</label><strong id="pTerm">0</strong
+              ><meter
+                id="pMeter"
+                min="-100"
+                max="100"
+                value="0"
+                aria-label="Proportional contribution"
+              ></meter
+              ><small id="pFormula">Gain × (weight × target − feedback)</small>
+            </div>
+            <div class="term">
+              <label> I · Accumulated error</label><strong id="iTerm">0</strong
+              ><meter
+                id="iMeter"
+                min="-100"
+                max="100"
+                value="0"
+                aria-label="Integral contribution"
+              ></meter
+              ><small id="iMemory">Memory: 0 unit·s</small>
+            </div>
+            <div class="term">
+              <label> D · Rate damping</label><strong id="dTerm">0</strong
+              ><meter
+                id="dMeter"
+                min="-100"
+                max="100"
+                value="0"
+                aria-label="Derivative contribution"
+              ></meter
+              ><small>−Gain × filtered measurement rate</small>
+            </div>
+          </div>
+          <div class="row termSummary">
+            <span id="errorNow">Error: 0</span><span id="sumNow">Sum: 0%</span
+            ><span id="limitState">Drive within limits</span>
+          </div>
+          <p class="note" id="integralState">
+            Integral memory is accumulating.
+          </p>
+          <canvas
+            id="termChart"
+            class="chart"
+            height="220"
+            role="img"
+            aria-label="Separate proportional, integral, and derivative contributions over time"
+          ></canvas>
+          <div class="legend">
+            <span><i style="background: #d6f578"></i>P · solid</span
+            ><span><i style="background: #51d8ee"></i>I · dashed</span
+            ><span><i style="background: #e5b5f2"></i>D · dotted</span
+            ><span>Auto-scaled contribution (%) versus time (s)</span>
+          </div>
+          <p class="hint note">
+            Switching I off clears its memory. Turning it back on starts
+            accumulation from zero. Derivative acts on measurement, so a
+            setpoint step does not create a derivative kick. Pin a baseline
+            before switching terms to compare the output response.
+          </p>
+        </div>
+      </details>
+      <footer>
+        GREEN SHOE GARAGE
+        <span>Local simulation · No telemetry · v1.0.0-rc.1</span
+        ><span>All process values are normalized to 0–100%.</span>
+      </footer>
+    </main>
+    <dialog id="helpDialog" aria-labelledby="helpTitle">
+      <div class="helpHeading">
+        <h2 id="helpTitle">Start with one change</h2>
+        <form method="dialog">
+          <button id="closeHelp" autofocus>Close guide</button>
+        </form>
+      </div>
+      <p>
+        LOOPLAB connects a PID controller to a simulated machine. Set a target,
+        change a gain, and watch how the machine and its recording respond.
+      </p>
+      <ol>
+        <li>
+          <strong>Choose a system, then Starter tuning.</strong> Switching the
+          system alone keeps your current gains. Starter tuning gives that
+          system a repeatable setup.
+        </li>
+        <li>
+          <strong>Press Replay.</strong> The app opens with a calculated
+          24-second preview. Replay animates it; Pause holds the machine and its
+          clock.
+        </li>
+        <li>
+          <strong>Pin a baseline, then change one gain.</strong> The baseline
+          keeps the old output trace. A change during playback acts on the
+          running machine; Reset run calculates a fresh complete response.
+        </li>
+        <li>
+          <strong>Compare and keep the result.</strong> Save a complete run in
+          Experiments, inspect a recorded moment, and export JSON to keep your
+          setup and shelf.
+        </li>
+      </ol>
+      <h3>What P, I and D do</h3>
+      <dl>
+        <dt>P · Respond to the present error</dt>
+        <dd>
+          More P usually produces a stronger correction. In these models it can
+          also increase overshoot or oscillation.
+        </dd>
+        <dt>I · Accumulate the error</dt>
+        <dd>
+          I can remove a persistent offset when the actuator has enough
+          capacity. Too much can overshoot. Switching I off clears its memory.
+        </dd>
+        <dt>D · Respond to changing feedback</dt>
+        <dd>
+          D can damp motion. It also reacts to sensor noise, so Advanced
+          includes a derivative filter. It acts on measurement, not on a target
+          step.
+        </dd>
+      </dl>
+      <button id="helpExamples">Open guided comparisons</button>
+      <h3>Read the machine and the chart together</h3>
+      <p>
+        The physical scene follows actual output. Sensor feedback can lag or
+        contain noise. Drive command is what the controller asks for; delivered
+        effort follows after actuator lag. The tank pump fills only; gravity
+        drains it. A negative thermal command represents active cooling.
+      </p>
+      <p>
+        All outputs are normalized to 0–100%. They are not calibrated degrees,
+        RPM or travel distances. A process pinned at an end stop or range limit
+        is not proof of stability.
+      </p>
+      <h3>Read a sample, keep a record</h3>
+      <p>
+        <strong>Inspect a moment:</strong> arrow keys move by 0.02 s; Home/End
+        move to the recording endpoints. Selecting a moment pauses playback
+        without moving the machine backward. Follow latest returns to the newest
+        sample.
+      </p>
+      <p>
+        <strong>Metrics:</strong> overshoot and 10–90% rise describe a
+        fixed-target run. Settling means the recording ends with at least one
+        continuous second inside the ±2% band (minimum 0.5 unit). It describes
+        the observed window. An asterisk means provisional; timed events or live
+        edits show Mixed run.
+      </p>
+      <p>
+        <strong>Backups:</strong> JSON keeps settings, baseline and saved
+        experiments; CSV keeps the current sampled recording; PNG and Print /
+        PDF create shareable views. One checkpoint is kept before import or
+        Fresh start. Use Restore checkpoint in Project to recover it.
+      </p>
+      <p class="note">
+        Opening this guide pauses playback. Close it and press Resume when
+        ready. The model equations and longer exercises are included in the
+        download's MODEL.md and TEACHING-GUIDE.md.
+      </p>
+      <form method="dialog"><button>Back to the bench</button></form>
+    </dialog>
+    <script>
+      (() => {
+        "use strict";
+        const $ = (id) => document.getElementById(id),
+          key = "looplab-v0.1.0";
+        const defaults = {
+          plant: "cart",
+          setpoint: 70,
+          kp: 1.8,
+          ki: 0.16,
+          kd: 0.35,
+          inertia: 1.8,
+          lag: 0.3,
+          disturbance: 0,
+          theme: "dark",
+          pEnabled: true,
+          iEnabled: true,
+          dEnabled: true,
+          noise: 0,
+          delay: 0,
+          power: 100,
+          eventStart: 8,
+          eventDuration: 4,
+          eventLoad: -12,
+          eventEnabled: false,
+          stiffness: 0.35,
+          damping: 0.55,
+          drain: 2,
+          mode: "easy",
+          lessonId: "none",
+          derivativeFilter: 0.12,
+          setpointWeight: 1,
+          integralLimit: 350,
+          antiWindup: true,
+        };
+        const plants = {
+          cart: {
+            name: "Motorized cart",
+            readout: "POSITION",
+            unit: "% travel",
+            note: "Motor force accelerates a carriage. Drag resists velocity, and the end stops bound its travel.",
+            assumptions:
+              "Normalized carriage: acceleration = (0.65 × effort − 0.8 × velocity + load) / inertia. Travel is bounded to 0–100%.",
+            preset: { kp: 1.8, ki: 0.16, kd: 0.35, inertia: 1.8, lag: 0.3 },
+          },
+          heater: {
+            name: "Thermal chamber",
+            readout: "TEMPERATURE",
+            unit: "% thermal range",
+            note: "Heating and active cooling compete with heat loss. The thermometer follows the actual thermal state.",
+            assumptions:
+              "Normalized chamber: rate = (0.82 × effort − 0.12 × temperature + load) / (2.3 × inertia). The thermal range is 0–100%; it is not a calibrated °C model.",
+            preset: { kp: 1.8, ki: 0.16, kd: 0.35, inertia: 1.8, lag: 0.3 },
+          },
+          tank: {
+            name: "Water tank",
+            readout: "WATER LEVEL",
+            unit: "% tank height",
+            note: "A pump fills the tank while gravity drains it. The pump can only add water; overshoot must drain away.",
+            assumptions:
+              "Normalized tank: level rate = (0.5 × pump effort − drain coefficient × √level + load) / capacity. Pump command is 0 to the selected limit. Empty/full tank boundaries constrain level; negative loads remove water.",
+            preset: {
+              kp: 2.4,
+              ki: 0.5,
+              kd: 0.25,
+              inertia: 1.5,
+              lag: 0.25,
+              drain: 2,
+            },
+          },
+          motor: {
+            name: "Motor & flywheel",
+            readout: "MOTOR SPEED",
+            unit: "% rated speed",
+            note: "Motor torque spins a flywheel. Drag and an opposing brake load reduce speed; negative drive effort actively brakes.",
+            assumptions:
+              "Normalized speed: rate = (1.5 × effort − 0.8 × speed + load) / inertia. Speed is bounded to 0–100% of rated speed. Rotation is visually slowed; reverse rotation is excluded.",
+            preset: { kp: 1.6, ki: 0.8, kd: 0.12, inertia: 2.5, lag: 0.12 },
+          },
+          spring: {
+            name: "Spring–mass–damper",
+            readout: "DISPLACEMENT",
+            unit: "% travel",
+            note: "An actuator stretches a spring and moves a mass. The spring pulls back while a damper dissipates motion.",
+            assumptions:
+              "Normalized spring: acceleration = (0.9 × effort − damping × velocity − stiffness × displacement + load) / mass. Travel is bounded to 0–100% with hard end stops. The spring rests at zero.",
+            preset: {
+              kp: 2,
+              ki: 0.35,
+              kd: 2,
+              inertia: 1.5,
+              lag: 0.12,
+              stiffness: 0.35,
+              damping: 0.55,
+            },
+          },
+        };
+        const lessons = {
+          p: {
+            title: "P · A stronger push",
+            plant: "motor",
+            gain: "kp",
+            before: 0.6,
+            after: 2.4,
+            description:
+              "Motor & flywheel: compare P = 0.6 with P = 2.4, with I and D at zero. Watch the remaining offset as well as the speed of response.",
+            takeaway:
+              "More P reduces the offset here, but proportional action alone does not eliminate it.",
+          },
+          i: {
+            title: "I · Remove the offset",
+            plant: "motor",
+            gain: "ki",
+            before: 0,
+            after: 0.8,
+            description:
+              "Motor & flywheel: compare I = 0 with I = 0.8. Integral action supplies the sustained effort needed to reach the target.",
+            takeaway:
+              "Integral action closes the remaining gap by accumulating error. It can also introduce overshoot.",
+          },
+          d: {
+            title: "D · Calm the motion",
+            plant: "spring",
+            gain: "kd",
+            before: 0,
+            after: 2,
+            description:
+              "Spring–mass–damper: compare D = 0 with D = 2, keeping P = 0.8 and I = 0.1. Watch the first peak and the oscillations that follow it.",
+            takeaway:
+              "Derivative action damps the motion in this example. Sensor noise can make derivative effort noisy; explore its filter in Advanced.",
+          },
+        };
+        let lessonUndo = null;
+        let experiments = [],
+          deletedExperiment = null;
+        const overlayStyles = [
+          { color: "#ffcb6b", dash: [12, 4], label: "long dash" },
+          { color: "#8ea9ff", dash: [3, 3], label: "short dash" },
+          { color: "#f48fb1", dash: [12, 3, 2, 3], label: "dash-dot" },
+          { color: "#64d9ad", dash: [1, 5], label: "dots" },
+        ];
+        function lowerLimit() {
+          return state.plant === "tank" ? 0 : -state.power;
+        }
+        function limited(value) {
+          return Math.max(lowerLimit(), Math.min(state.power, value));
+        }
+        function saturated(value) {
+          return value < lowerLimit() || value > state.power;
+        }
+        const reduceMotion =
+          window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ||
+          false;
+        let wheelAngle = 0,
+          pumpAngle = 0,
+          baselinePlant = null;
+        let sensorHistory = [],
+          measured = 0,
+          randomSeed = 12345,
+          events = [],
+          lastLoad = null;
+        let controllerSnapshot = null;
+        let fanAngle = 0;
+        let previousMeasurement = 0,
+          experimentChanged = false;
+        let state = { ...defaults },
+          trace = [],
+          baseline = null,
+          timer = null,
+          position = 0,
+          velocity = 0,
+          integral = 0,
+          priorError = 0,
+          filteredD = 0,
+          effort = 0,
+          actuator = 0,
+          t = 0,
+          saveTimer;
+        let recoveryText = null,
+          runKind = "preview",
+          boundaryHit = false;
+        let inspectedIndex = null,
+          checkpoint = null,
+          checkpointPersistent = false,
+          savePending = false;
+        const controllerKeys = [
+          "derivativeFilter",
+          "setpointWeight",
+          "integralLimit",
+        ];
+        const defs = [
+          [
+            "kp",
+            "P · Proportional",
+            0,
+            8,
+            0.05,
+            "Push harder in proportion to the present error.",
+          ],
+          [
+            "ki",
+            "I · Integral",
+            0,
+            2,
+            0.01,
+            "Accumulate past error to eliminate persistent offset.",
+          ],
+          [
+            "kd",
+            "D · Derivative",
+            0,
+            4,
+            0.01,
+            "React to the rate of change to damp overshoot.",
+          ],
+          [
+            "inertia",
+            "Plant inertia",
+            0.3,
+            5,
+            0.1,
+            "More inertia slows the physical response.",
+          ],
+          [
+            "lag",
+            "Actuator lag",
+            0,
+            2,
+            0.05,
+            "Time lag between command and delivered effort.",
+          ],
+          [
+            "noise",
+            "Sensor noise ±",
+            0,
+            5,
+            0.1,
+            "Uniform measurement noise in process units; repeats identically on restart.",
+          ],
+          [
+            "delay",
+            "Sensor delay (s)",
+            0,
+            2,
+            0.02,
+            "Feedback age; distinct from actuator lag.",
+          ],
+          [
+            "power",
+            "Actuator limit (%)",
+            5,
+            100,
+            1,
+            "Maximum drive command. The tank pump fills only; other drives act in either direction.",
+          ],
+          [
+            "eventStart",
+            "Disturbance start (s)",
+            0,
+            23,
+            0.1,
+            "Time at which the scheduled opposing or assisting load begins.",
+          ],
+          [
+            "eventDuration",
+            "Duration (s)",
+            0.1,
+            24,
+            0.1,
+            "Load ends at start + duration, or at the recording end.",
+          ],
+          [
+            "eventLoad",
+            "Load magnitude",
+            -30,
+            30,
+            1,
+            "Signed external load; negative opposes positive movement, heating, speed or filling.",
+          ],
+          [
+            "stiffness",
+            "Spring stiffness",
+            0.05,
+            1.5,
+            0.05,
+            "Restoring force per unit displacement.",
+          ],
+          [
+            "damping",
+            "Mechanical damping",
+            0.05,
+            3,
+            0.05,
+            "Resistance proportional to mass velocity.",
+          ],
+          [
+            "drain",
+            "Drain coefficient",
+            0,
+            5,
+            0.1,
+            "Gravity outflow coefficient; larger drains empty the tank faster.",
+          ],
+          [
+            "derivativeFilter",
+            "Derivative filter (s)",
+            0.02,
+            1,
+            0.01,
+            "Larger values smooth the measured rate, with more delay. Default: 0.12 s.",
+          ],
+          [
+            "setpointWeight",
+            "P setpoint weight",
+            0,
+            1,
+            0.05,
+            "P = gain × (weight × target − feedback). Lower weight softens target changes; I still sees the full error.",
+          ],
+          [
+            "integralLimit",
+            "Integral memory cap (unit·s)",
+            0,
+            1000,
+            10,
+            "Bounds accumulated error before multiplying by I gain. Zero prevents integral contribution. Default: 350.",
+          ],
+        ];
+        function control([id, name, min, max, step, help]) {
+          const gain = ["kp", "ki", "kd"].includes(id),
+            term = id.slice(1);
+          const div = document.createElement("div");
+          div.className = "control";
+          div.id = id + "Control";
+          div.innerHTML = `<div class="labelrow"><label for="${id}">${name}</label>${gain ? `<input id="${id}Number" type="number" min="${min}" max="${max}" step="${step}" aria-label="${name} exact value"><input id="${term}Enabled" type="checkbox" checked aria-label="Enable ${name}" title="Enable ${name}">` : `<output id="${id}Value"></output>`}</div><input id="${id}" type="range" min="${min}" max="${max}" step="${step}" aria-describedby="${id}Help"><small id="${id}Help">${help}</small>`;
+          if (gain) {
+            const input = div.querySelector("input[type=range]"),
+              wrap = document.createElement("div"),
+              knob = document.createElement("div");
+            wrap.className = "knobWrap";
+            knob.className = "knobFace";
+            knob.id = id + "Knob";
+            knob.setAttribute("aria-hidden", "true");
+            knob.title =
+              "Drag up or down to adjust; slider and exact value also available.";
+            wrap.append(knob, input);
+            div.insertBefore(wrap, div.querySelector("small"));
+            let origin = null;
+            knob.addEventListener("pointerdown", (e) => {
+              if (e.button !== 0) return;
+              origin = { y: e.clientY, value: state[id] };
+              knob.setPointerCapture(e.pointerId);
+            });
+            knob.addEventListener("pointermove", (e) => {
+              if (!origin) return;
+              const next = Math.max(
+                min,
+                Math.min(
+                  max,
+                  Math.round(
+                    (origin.value +
+                      ((origin.y - e.clientY) * (max - min)) / 180) /
+                      step,
+                  ) * step,
+                ),
+              );
+              handleEdit(id, Number(next.toFixed(4)));
+            });
+            for (const event of [
+              "pointerup",
+              "pointercancel",
+              "lostpointercapture",
+            ])
+              knob.addEventListener(event, () => {
+                origin = null;
+              });
+          }
+          $(
+            gain
+              ? "knobs"
+              : controllerKeys.includes(id)
+                ? "controllerControls"
+                : id.startsWith("event")
+                  ? "eventControls"
+                  : ["noise", "delay", "power"].includes(id)
+                    ? "sensorControls"
+                    : "modelControls",
+          ).append(div);
+          if (gain)
+            $(id + "Number").addEventListener("change", (e) => {
+              const v = e.target.valueAsNumber;
+              if (!Number.isFinite(v) || v < min || v > max) {
+                tell(`${name} must be between ${min} and ${max}.`);
+                e.target.value = state[id];
+                return;
+              }
+              handleEdit(id, v);
+            });
+        }
+        defs.forEach(control);
+        function tell(message) {
+          $("noticeText").textContent = message;
+          $("notice").hidden = false;
+        }
+        function validateState(input) {
+          if (!input || !Object.hasOwn(plants, input.plant))
+            throw Error("Unknown physical system.");
+          const next = { ...defaults, plant: input.plant };
+          for (const [id, min, max] of [
+            ["setpoint", 10, 90],
+            ...defs.map((d) => [d[0], d[2], d[3]]),
+          ]) {
+            const value = input[id] === undefined ? defaults[id] : input[id];
+            if (
+              typeof value !== "number" ||
+              !Number.isFinite(value) ||
+              value < min ||
+              value > max
+            )
+              throw Error(`Invalid ${id}: expected ${min}–${max}.`);
+            next[id] = value;
+          }
+          for (const id of [
+            "pEnabled",
+            "iEnabled",
+            "dEnabled",
+            "eventEnabled",
+            "antiWindup",
+          ]) {
+            if (input[id] !== undefined && typeof input[id] !== "boolean")
+              throw Error("Invalid " + id);
+            next[id] = input[id] ?? defaults[id];
+          }
+          if (
+            input.theme !== undefined &&
+            !["dark", "light", "contrast"].includes(input.theme)
+          )
+            throw Error("Invalid theme.");
+          next.theme = input.theme ?? defaults.theme;
+          for (const [id, allowed, fallback] of [
+            ["mode", ["easy", "advanced"], "advanced"],
+            ["lessonId", ["none", "p", "i", "d"], "none"],
+          ]) {
+            if (input[id] !== undefined && !allowed.includes(input[id]))
+              throw Error("Invalid " + id);
+            next[id] = input[id] ?? fallback;
+          }
+          if (
+            input.disturbance !== undefined &&
+            ![0, -12].includes(input.disturbance)
+          )
+            throw Error("Invalid manual load.");
+          next.disturbance = input.disturbance ?? 0;
+          return next;
+        }
+        function validateProject(obj) {
+          if (
+            !obj ||
+            obj.format !== "looplab-project" ||
+            ![1, 2, 3, 4].includes(obj.version)
+          )
+            throw Error(
+              "Unsupported project format or version. Use a LOOPLAB v1–v4 JSON project.",
+            );
+          const next = validateState(obj.state);
+          let samples = null,
+            source = null;
+          if (obj.baseline !== undefined && obj.baseline !== null) {
+            if (
+              !Array.isArray(obj.baseline) ||
+              obj.baseline.length < 1 ||
+              obj.baseline.length > 1500
+            )
+              throw Error("Invalid baseline length.");
+            let previous = -1;
+            samples = obj.baseline.map((p) => {
+              if (
+                !p ||
+                !["t", "y", "u", "s"].every(
+                  (k) => typeof p[k] === "number" && Number.isFinite(p[k]),
+                ) ||
+                p.t < 0 ||
+                p.t > 24.001 ||
+                p.t <= previous ||
+                p.y < 0 ||
+                p.y > 100 ||
+                Math.abs(p.u) > 100 ||
+                p.s < 10 ||
+                p.s > 90
+              )
+                throw Error("Invalid baseline samples.");
+              previous = p.t;
+              return { t: p.t, y: p.y, u: p.u, s: p.s };
+            });
+            source = obj.baselinePlant ?? next.plant;
+            if (!Object.hasOwn(plants, source))
+              throw Error("Unknown baseline system.");
+          }
+          const shelf = [];
+          if (obj.version === 4) {
+            if (!Array.isArray(obj.experiments) || obj.experiments.length > 12)
+              throw Error("Invalid experiment shelf (maximum 12).");
+            const ids = new Set(),
+              names = new Set();
+            for (const record of obj.experiments) {
+              if (
+                !record ||
+                record.modelVersion !== 1 ||
+                typeof record.id !== "string" ||
+                !/^[A-Za-z0-9_-]{1,64}$/.test(record.id) ||
+                ids.has(record.id)
+              )
+                throw Error("Invalid experiment identity or model version.");
+              const name = validName(record.name);
+              if (names.has(name.toLowerCase()))
+                throw Error("Duplicate experiment name.");
+              if (
+                typeof record.selected !== "boolean" ||
+                typeof record.boundary !== "boolean"
+              )
+                throw Error("Invalid experiment flags.");
+              const config = validateState(record.state);
+              config.lessonId = "none";
+              if (!Array.isArray(record.trace) || record.trace.length !== 1200)
+                throw Error(
+                  "Experiments require a complete 24-second recording.",
+                );
+              const data = record.trace.map((v, i) => {
+                if (
+                  !v ||
+                  !["t", "y", "u", "s"].every(
+                    (k) => typeof v[k] === "number" && Number.isFinite(v[k]),
+                  ) ||
+                  Math.abs(v.t - (i + 1) * 0.02) > 1e-6 ||
+                  v.y < 0 ||
+                  v.y > 100 ||
+                  v.u > config.power + 1e-6 ||
+                  v.u < (config.plant === "tank" ? 0 : -config.power) - 1e-6 ||
+                  v.s !== config.setpoint
+                )
+                  throw Error("Invalid experiment samples or settings.");
+                return { t: v.t, y: v.y, u: v.u, s: v.s };
+              });
+              ids.add(record.id);
+              names.add(name.toLowerCase());
+              shelf.push({
+                id: record.id,
+                name,
+                modelVersion: 1,
+                state: config,
+                trace: data,
+                selected: record.selected,
+                boundary: record.boundary,
+              });
+            }
+            if (shelf.filter((e) => e.selected).length > 4)
+              throw Error("Select no more than four comparison responses.");
+          }
+          return {
+            state: next,
+            baseline: samples,
+            baselinePlant: source,
+            experiments: shelf,
+          };
+        }
+        function validName(value) {
+          if (
+            typeof value !== "string" ||
+            !value.trim() ||
+            value.trim().length > 60 ||
+            /[\u0000-\u001f\u007f]/.test(value)
+          )
+            throw Error(
+              "Use a name of 1–60 characters, without control characters.",
+            );
+          return value.trim();
+        }
+        function html(value) {
+          return String(value).replace(
+            /[&<>"']/g,
+            (c) =>
+              ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;",
+              })[c],
+          );
+        }
+        function visibleExperiments() {
+          return experiments
+            .filter((e) => e.selected)
+            .map((record, i) => ({
+              record,
+              style: overlayStyles[i],
+              number: i + 1,
+            }))
+            .filter((e) => e.record.state.plant === state.plant);
+        }
+        function experimentStats(data, config, mixed = false) {
+          if (!data.length) return null;
+          const end = data.at(-1),
+            target = config.setpoint,
+            peak = Math.max(...data.map((p) => p.y));
+          const error = Math.abs(end.y - target);
+          let lastOutside = -1;
+          for (let i = 0; i < data.length; i++)
+            if (Math.abs(data[i].y - target) > Math.max(0.5, target * 0.02))
+              lastOutside = i;
+          const entry = data[lastOutside + 1];
+          const settle = entry && end.t - entry.t >= 1 ? entry.t : null;
+          return {
+            error,
+            peak,
+            overshoot: Math.max(0, ((peak - target) / target) * 100),
+            settle,
+            step: !mixed && !config.eventEnabled,
+            complete: end.t >= 23.99,
+          };
+        }
+        function comparisonRow(name, data, config, mixed = false) {
+          const m = experimentStats(data, config, mixed);
+          if (!m) return "";
+          return `<tr><th scope="row">${html(name)}</th><td>${config.setpoint}%</td><td>${m.error.toFixed(2)}</td><td>${m.peak.toFixed(2)}%</td><td>${m.step ? m.overshoot.toFixed(1) + "%" : "—"}</td><td>${!m.step ? "—" : m.settle === null ? (m.complete ? "Not settled" : "Pending") : m.settle.toFixed(1) + " s" + (m.complete ? "" : "*")}</td></tr>`;
+        }
+        function renderComparisonTable() {
+          $("comparisonSystem").textContent = plants[state.plant].name;
+          $("comparisonRows").innerHTML =
+            comparisonRow(
+              t < 23.99 ? "Current · in progress" : "Current",
+              trace,
+              state,
+              experimentChanged,
+            ) +
+            visibleExperiments()
+              .map(({ record, number }) =>
+                comparisonRow(
+                  `${number} · ${record.name}`,
+                  record.trace,
+                  record.state,
+                ),
+              )
+              .join("");
+        }
+        function renderExperiments() {
+          $("experimentCount").textContent =
+            `${experiments.length} saved · ${experiments.filter((e) => e.selected).length}/4 selected`;
+          $("experimentList").innerHTML = experiments.length
+            ? experiments
+                .map((record) => {
+                  const config = record.state,
+                    matching = config.plant === state.plant;
+                  const m = experimentStats(record.trace, config);
+                  return `<div class="experimentRow" data-record="${record.id}"><div><input id="name-${record.id}" type="text" maxlength="60" value="${html(record.name)}" data-rename="${record.id}" aria-label="Name of experiment ${html(record.name)}"><p>${plants[config.plant].name} · Target ${config.setpoint}% · P ${config.kp} / I ${config.ki} / D ${config.kd}<br>Error ${m.error.toFixed(2)} · Peak ${m.peak.toFixed(2)}%${config.eventEnabled ? " · Scheduled load" : ""}${record.boundary ? " · Boundary reached" : ""}${matching ? "" : " · Hidden on this system"}</p></div><div class="experimentActions"><label><input id="compare-${record.id}" type="checkbox" data-compare="${record.id}" ${record.selected ? "checked" : ""} aria-label="Overlay ${html(record.name)}">Compare</label><button data-load="${record.id}" aria-label="Load ${html(record.name)}">Load</button><button data-remove="${record.id}" aria-label="Remove ${html(record.name)}">Remove</button></div></div>`;
+                })
+                .join("")
+            : '<p class="note">No saved experiments yet. Give this response a name to keep its settings and trace.</p>';
+          $("undoDelete").hidden = !deletedExperiment;
+          renderOverlays();
+          updateExperimentSaveState();
+          renderComparisonTable();
+        }
+        function renderOverlays() {
+          $("experimentCount").textContent =
+            `${experiments.length} saved · ${experiments.filter((e) => e.selected).length}/4 selected`;
+          const visible = visibleExperiments();
+          $("comparisonLegend").hidden = !visible.length;
+          $("comparisonLegend").innerHTML = visible
+            .map(
+              ({ record, style, number }) =>
+                `<span><svg class="traceKey" viewBox="0 0 28 12" aria-hidden="true"><path d="M0 6H28" stroke="${style.color}" stroke-width="2.5" stroke-dasharray="${style.dash.join(" ")}"/></svg>${number} · ${html(record.name)} · ${style.label} · target ${record.state.setpoint}%</span>`,
+            )
+            .join("");
+          renderComparisonTable();
+        }
+        function updateExperimentSaveState() {
+          const ready =
+            !timer && t >= 23.99 && !experimentChanged && trace.length === 1200;
+          $("saveExperiment").disabled = !ready || experiments.length >= 12;
+          $("experimentSaveHint").textContent =
+            experiments.length >= 12
+              ? "Shelf full (12). Export a backup, then remove an experiment to make room."
+              : ready
+                ? "Complete 24-second response ready to save. Stored traces do not change as you tune."
+                : "Use Reset run to calculate a repeatable 24-second response before saving. Live changes are not recorded as a replayable sequence.";
+        }
+        function saveExperiment(event) {
+          event.preventDefault();
+          if (
+            timer ||
+            t < 23.99 ||
+            experimentChanged ||
+            trace.length !== 1200 ||
+            experiments.length >= 12
+          )
+            return;
+          try {
+            const name = validName($("experimentName").value);
+            if (
+              experiments.some(
+                (e) => e.name.toLowerCase() === name.toLowerCase(),
+              )
+            )
+              throw Error(
+                "That experiment name is already in use. Choose another name.",
+              );
+            let id;
+            do {
+              id =
+                "e-" +
+                Date.now().toString(36) +
+                "-" +
+                Math.random().toString(36).slice(2, 9);
+            } while (experiments.some((e) => e.id === id));
+            const selected = experiments.filter((e) => e.selected).length < 4;
+            experiments.push({
+              id,
+              name,
+              modelVersion: 1,
+              state: { ...state, lessonId: "none" },
+              trace: trace.map((p) => ({
+                t: +p.t.toFixed(6),
+                y: +p.y.toFixed(6),
+                u: +p.u.toFixed(6),
+                s: p.s,
+              })),
+              selected,
+              boundary: boundaryHit,
+            });
+            $("experimentName").value = "";
+            renderExperiments();
+            draw();
+            save();
+            tell(
+              selected
+                ? `Saved “${name}” and added its overlay.`
+                : `Saved “${name}”. Four overlays are already selected; clear one to compare this response.`,
+            );
+          } catch (error) {
+            tell(error.message);
+          }
+        }
+        function changeExperiment(event) {
+          const input = event.target,
+            id = input.dataset.rename || input.dataset.compare;
+          const record = experiments.find((e) => e.id === id);
+          if (!record) return;
+          if (input.dataset.rename) {
+            try {
+              const name = validName(input.value);
+              if (
+                experiments.some(
+                  (e) =>
+                    e !== record && e.name.toLowerCase() === name.toLowerCase(),
+                )
+              )
+                throw Error("That experiment name is already in use.");
+              record.name = name;
+            } catch (error) {
+              input.value = record.name;
+              tell(error.message);
+              return;
+            }
+          } else {
+            if (
+              input.checked &&
+              experiments.filter((e) => e.selected).length >= 4
+            ) {
+              input.checked = false;
+              tell(
+                "Select up to four overlays. Clear one before adding another.",
+              );
+              return;
+            }
+            record.selected = input.checked;
+          }
+          if (input.dataset.rename) {
+            input.value = record.name;
+            input.setAttribute(
+              "aria-label",
+              `Name of experiment ${record.name}`,
+            );
+            const row = input.closest(".experimentRow");
+            row
+              .querySelector("[data-compare]")
+              .setAttribute("aria-label", `Overlay ${record.name}`);
+            row
+              .querySelector("[data-load]")
+              .setAttribute("aria-label", `Load ${record.name}`);
+            row
+              .querySelector("[data-remove]")
+              .setAttribute("aria-label", `Remove ${record.name}`);
+          }
+          renderOverlays();
+          draw();
+          save();
+        }
+        function clickExperiment(event) {
+          const button = event.target.closest("button");
+          if (!button) return;
+          const id = button.dataset.load || button.dataset.remove,
+            index = experiments.findIndex((e) => e.id === id);
+          if (index < 0) return;
+          const record = experiments[index];
+          if (button.dataset.load) {
+            stop();
+            state = {
+              ...record.state,
+              theme: state.theme,
+              mode: state.mode,
+              lessonId: "none",
+            };
+            lessonUndo = null;
+            sync();
+            run();
+            save();
+            document.querySelector(`[data-load="${id}"]`)?.focus();
+            tell(
+              `Loaded “${record.name}”. A fresh 24-second preview was calculated; its saved trace is unchanged.`,
+            );
+          } else {
+            deletedExperiment = { record, index };
+            experiments.splice(index, 1);
+            renderExperiments();
+            draw();
+            save();
+            $("undoDelete").focus();
+          }
+        }
+        function undoExperimentDelete() {
+          if (!deletedExperiment) return;
+          if (experiments.length >= 12) {
+            tell(
+              "The shelf is full. Remove another experiment before restoring this one.",
+            );
+            return;
+          }
+          const { record, index } = deletedExperiment;
+          if (
+            experiments.some(
+              (e) => e.name.toLowerCase() === record.name.toLowerCase(),
+            )
+          ) {
+            tell(
+              "That name is now in use. Rename that experiment before restoring this one.",
+            );
+            return;
+          }
+          if (experiments.filter((e) => e.selected).length >= 4)
+            record.selected = false;
+          experiments.splice(index, 0, record);
+          deletedExperiment = null;
+          renderExperiments();
+          draw();
+          save();
+          $("name-" + record.id).focus();
+        }
+        function comparisonReport() {
+          const visible = visibleExperiments();
+          if (!visible.length) return "";
+          const legend = visible
+            .map(
+              ({ record, style, number }) =>
+                `${number} · ${html(record.name)} (${style.label}, target ${record.state.setpoint}%)`,
+            )
+            .join("; ");
+          const rows =
+            comparisonRow("Current", trace, state, experimentChanged) +
+            visible
+              .map(({ record, number }) =>
+                comparisonRow(
+                  `${number} · ${record.name}`,
+                  record.trace,
+                  record.state,
+                ),
+              )
+              .join("");
+          const setups = visible
+            .map(({ record, number }) => {
+              const c = record.state;
+              return `<p><strong>${number} · ${html(record.name)}</strong>: P/I/D ${c.kp}/${c.ki}/${c.kd}; enabled ${c.pEnabled}/${c.iEnabled}/${c.dEnabled}; inertia ${c.inertia}; lag ${c.lag}; filter ${c.derivativeFilter}; P weight ${c.setpointWeight}; memory cap ${c.integralLimit}; anti-windup ${c.antiWindup}; noise ±${c.noise}; delay ${c.delay}; capacity ${c.power}%; stiffness/damping/drain ${c.stiffness}/${c.damping}/${c.drain} (where applicable); manual load ${c.disturbance}; scheduled load ${c.eventEnabled ? `${c.eventLoad} at ${c.eventStart}s for ${c.eventDuration}s` : "off"}.${record.boundary ? " Model boundary reached." : ""}</p>`;
+            })
+            .join("");
+          return `<h2>Saved response comparisons</h2><p>${legend}</p><table><thead><tr><th>Response</th><th>Target</th><th>Error</th><th>Peak</th><th>Overshoot</th><th>Settling</th></tr></thead><tbody>${rows}</tbody></table><p>Error is absolute error in normalized output units. Peak is output as a percentage of model range. Only selected responses for ${plants[state.plant].name} are shown. Targets and conditions may differ. Scheduled loads have no step metrics. Asterisk: provisional settling during a partial run.</p>${setups}`;
+        }
+
+        function restoreSaved() {
+          let raw;
+          try {
+            raw = localStorage.getItem(key);
+            if (!raw) {
+              $("save").textContent = "Ready · autosave on";
+              return;
+            }
+            const obj = JSON.parse(raw);
+            const next = validateProject({
+              format: "looplab-project",
+              version: 3,
+              ...obj,
+            });
+            state = next.state;
+            baseline = next.baseline;
+            baselinePlant = next.baselinePlant;
+            experiments = next.experiments;
+            $("save").textContent = "Saved locally";
+          } catch (error) {
+            recoveryText = raw || null;
+            $("save").textContent = "Defaults loaded";
+            if (recoveryText) {
+              try {
+                localStorage.setItem(key + "-recovery", recoveryText);
+              } catch {}
+              $("recovery").hidden = false;
+            }
+            tell(
+              "Saved settings could not be restored. The default experiment is open. Download the recovery copy before replacing those settings.",
+            );
+          }
+        }
+        function renderCheckpoint() {
+          $("restoreCheckpoint").disabled = !checkpoint;
+          $("checkpointStatus").textContent = checkpoint
+            ? `Before ${checkpoint.reason} · ${new Date(checkpoint.created).toLocaleString()}. ${checkpointPersistent ? "Available after reload." : "This tab only; export JSON to keep your work."} Restoring swaps it with the current setup and shelf.`
+            : "A checkpoint is kept before an import or Fresh start.";
+        }
+        function keepCheckpoint(reason) {
+          // A detached snapshot is essential: subsequent edits must not mutate recovery data.
+          checkpoint = {
+            created: new Date().toISOString(),
+            reason,
+            project: JSON.parse(JSON.stringify(projectPayload())),
+          };
+          checkpointPersistent = false;
+          try {
+            localStorage.setItem(
+              key + "-checkpoint",
+              JSON.stringify(checkpoint),
+            );
+            checkpointPersistent = true;
+          } catch {}
+          renderCheckpoint();
+          return checkpointPersistent;
+        }
+        try {
+          const savedCheckpoint = JSON.parse(
+            localStorage.getItem(key + "-checkpoint") || "null",
+          );
+          if (savedCheckpoint) {
+            if (
+              !["import", "Fresh start", "checkpoint restore"].includes(
+                savedCheckpoint.reason,
+              ) ||
+              typeof savedCheckpoint.created !== "string" ||
+              !Number.isFinite(Date.parse(savedCheckpoint.created))
+            )
+              throw Error("Invalid checkpoint metadata");
+            savedCheckpoint.project = {
+              format: "looplab-project",
+              version: 4,
+              ...validateProject(savedCheckpoint.project),
+            };
+            checkpoint = savedCheckpoint;
+            checkpointPersistent = true;
+          }
+        } catch {}
+        renderCheckpoint();
+        restoreSaved();
+        if (!recoveryText) {
+          try {
+            recoveryText = localStorage.getItem(key + "-recovery");
+            if (recoveryText) {
+              $("recovery").hidden = false;
+              tell(
+                "An earlier recovery copy of your saved settings is available to download.",
+              );
+            }
+          } catch {}
+        }
+
+        function sync() {
+          for (let k of [
+            "pEnabled",
+            "iEnabled",
+            "dEnabled",
+            "eventEnabled",
+            "antiWindup",
+          ])
+            $(k).checked = state[k] !== false;
+          for (let k of [
+            "plant",
+            "setpoint",
+            "theme",
+            ...defs.map((d) => d[0]),
+          ])
+            $(k).value = state[k];
+          for (const k of ["setpoint", ...defs.map((d) => d[0])]) {
+            if (["kp", "ki", "kd"].includes(k))
+              $(k + "Number").value = state[k];
+            else
+              $(k + "Value").textContent = Number(state[k]).toFixed(
+                k === "setpoint" ? 0 : 2,
+              );
+          }
+          $("tuneSummary").textContent =
+            `P ${state.kp} · I ${state.ki} · D ${state.kd} · Target ${state.setpoint}%`;
+          $("disturb").textContent = state.disturbance
+            ? "Remove load"
+            : "Apply load";
+          for (const k of ["kp", "ki", "kd"])
+            $(k + "Control").style.opacity = state[k.slice(1) + "Enabled"]
+              ? "1"
+              : ".65";
+          document.body.className = state.theme === "dark" ? "" : state.theme;
+          document.body.setAttribute("data-mode", state.mode);
+          $("easyMode").setAttribute(
+            "aria-pressed",
+            String(state.mode === "easy"),
+          );
+          $("advancedMode").setAttribute(
+            "aria-pressed",
+            String(state.mode === "advanced"),
+          );
+          const custom =
+            state.noise !== 0 ||
+            state.delay !== 0 ||
+            state.power !== 100 ||
+            state.eventEnabled ||
+            state.disturbance !== 0 ||
+            !state.antiWindup ||
+            controllerKeys.some((k) => state[k] !== defaults[k]) ||
+            Object.entries(plants[state.plant].preset).some(
+              ([k, v]) => !["kp", "ki", "kd"].includes(k) && state[k] !== v,
+            );
+          $("customSetup").hidden = state.mode !== "easy" || !custom;
+          $("customSetup").textContent =
+            "Custom model or controller settings remain active. Choose Advanced to inspect them; changing views preserves all settings.";
+          $("undoLesson").hidden = !lessonUndo;
+          $("pFormula").textContent =
+            `Gain × (${state.setpointWeight} × target − feedback)`;
+          const model = plants[state.plant];
+          $("plantnote").textContent = model.note;
+          $("unitnote").textContent = "10–90 " + model.unit + " (normalized)";
+          $("systemLabel").textContent = "· " + model.name;
+          $("readoutName").textContent = model.readout;
+          $("modelAssumptions").textContent =
+            model.assumptions +
+            " Gains are teaching values, not hardware tuning constants.";
+          for (let id of Object.keys(plants))
+            $(id + "Scene").style.display = id === state.plant ? "" : "none";
+          $("inertiaControl").querySelector("label").textContent =
+            state.plant === "tank"
+              ? "Tank capacity"
+              : state.plant === "spring"
+                ? "Mass"
+                : state.plant === "heater"
+                  ? "Thermal inertia"
+                  : "Inertia";
+          for (let id of ["stiffness", "damping"])
+            $(id + "Control").style.display =
+              state.plant === "spring" ? "grid" : "none";
+          $("drainControl").style.display =
+            state.plant === "tank" ? "grid" : "none";
+          $("baselineNote").textContent = baseline
+            ? baselinePlant === state.plant
+              ? "Pinned baseline shown for this system."
+              : "Baseline retained for " +
+                (plants[baselinePlant]?.name || "another system") +
+                "; hidden here."
+            : "Switching systems keeps your tuning. Use Starter tuning for a repeatable starting point.";
+          $("tankTarget").setAttribute(
+            "transform",
+            `translate(0,${123 - state.setpoint * 1.76})`,
+          );
+          $("speedTarget").setAttribute(
+            "transform",
+            `rotate(${state.setpoint * 1.8},642,273)`,
+          );
+          $("springTarget").setAttribute(
+            "transform",
+            `translate(${-395 + state.setpoint * 4.8},0)`,
+          );
+          $("targetMarker").setAttribute(
+            "transform",
+            `translate(${190 + state.setpoint * 5.3},0)`,
+          );
+          $("tempTarget").setAttribute(
+            "transform",
+            `translate(0,${113 - state.setpoint * 1.6})`,
+          );
+          for (let d of defs.slice(0, 3))
+            $(d[0] + "Knob").style.setProperty(
+              "--angle",
+              -135 + (270 * state[d[0]]) / d[3] + "deg",
+            );
+          renderExperiments();
+          $("baseline").textContent = baseline
+            ? "Clear baseline"
+            : "Pin baseline";
+        }
+        function projectPayload() {
+          return {
+            format: "looplab-project",
+            version: 4,
+            state,
+            baseline,
+            baselinePlant,
+            experiments,
+          };
+        }
+        function save() {
+          $("save").textContent = "Unsaved";
+          savePending = true;
+          clearTimeout(saveTimer);
+          saveTimer = setTimeout(flushSave, 250);
+        }
+        function flushSave() {
+          if (!savePending) return;
+          clearTimeout(saveTimer);
+          try {
+            localStorage.setItem(key, JSON.stringify(projectPayload()));
+            savePending = false;
+            $("save").textContent = "Saved locally";
+          } catch {
+            $("save").textContent = "Storage unavailable; export JSON";
+          }
+        }
+        function clearSimulation() {
+          inspectedIndex = null;
+          boundaryHit = false;
+          wheelAngle = 0;
+          pumpAngle = 0;
+          sensorHistory = [];
+          measured = 0;
+          randomSeed = 12345;
+          events = [];
+          lastLoad = null;
+          controllerSnapshot = null;
+          fanAngle = 0;
+          previousMeasurement = 0;
+          experimentChanged = false;
+          position = 0;
+          velocity = 0;
+          integral = 0;
+          priorError = state.setpoint;
+          filteredD = 0;
+          effort = 0;
+          actuator = 0;
+          t = 0;
+          trace = [];
+        }
+        function resetSimulation() {
+          clearSimulation();
+          for (let i = 0; i < 1200; i++) advance(0.02);
+          draw();
+          metrics();
+          renderMachine();
+        }
+        function random() {
+          randomSeed = (Math.imul(1664525, randomSeed) + 1013904223) >>> 0;
+          return randomSeed / 4294967296;
+        }
+        function advance(dt) {
+          sensorHistory.push(position);
+          let delaySteps = Math.round(state.delay / dt);
+          measured =
+            (sensorHistory[
+              Math.max(0, sensorHistory.length - 1 - delaySteps)
+            ] || 0) +
+            (random() * 2 - 1) * state.noise;
+          if (sensorHistory.length > 102) sensorHistory.shift();
+          let active =
+            state.eventEnabled &&
+            t + 1e-8 >= state.eventStart &&
+            t < state.eventStart + state.eventDuration - 1e-8;
+          let load = Number(state.disturbance) + (active ? state.eventLoad : 0);
+          if (lastLoad === null) {
+            if (load !== 0) events.push({ t, label: "Load " + load });
+          } else if (lastLoad !== load)
+            events.push({ t, label: "Load " + load });
+          lastLoad = load;
+          const err = state.setpoint - measured;
+          let derivative = -(measured - previousMeasurement) / dt;
+          previousMeasurement = measured;
+          filteredD +=
+            Math.min(1, dt / state.derivativeFilter) * (derivative - filteredD);
+          const p = state.pEnabled
+              ? state.kp * (state.setpointWeight * state.setpoint - measured)
+              : 0,
+            d = state.dEnabled ? state.kd * filteredD : 0;
+          let pre = p + (state.iEnabled ? state.ki * integral : 0) + d;
+          let held = false,
+            capped = false;
+          if (state.iEnabled && state.ki > 0) {
+            if (
+              !(
+                state.antiWindup &&
+                ((pre >= state.power && err > 0) ||
+                  (pre <= lowerLimit() && err < 0))
+              )
+            ) {
+              let next = integral + err * dt;
+              integral = Math.max(
+                -state.integralLimit,
+                Math.min(state.integralLimit, next),
+              );
+              capped = integral !== next;
+            } else held = true;
+          } else integral = 0;
+          const i = state.iEnabled ? state.ki * integral : 0,
+            raw = p + i + d;
+          controllerSnapshot = {
+            p,
+            i,
+            d,
+            e: err,
+            memory: integral,
+            raw,
+            saturated: saturated(raw),
+            held,
+            capped,
+          };
+          effort = limited(raw);
+          actuator +=
+            (effort - actuator) * Math.min(1, dt / (state.lag + 0.04));
+          if (state.plant === "cart") {
+            velocity +=
+              ((actuator * 0.65 - velocity * 0.8 + load) * dt) / state.inertia;
+            position += velocity * dt;
+          } else if (state.plant === "heater") {
+            position +=
+              ((actuator * 0.82 - position * 0.12 + load) * dt) /
+              (state.inertia * 2.3);
+          } else if (state.plant === "tank") {
+            position +=
+              ((0.5 * actuator -
+                state.drain * Math.sqrt(Math.max(0, position)) +
+                load) *
+                dt) /
+              state.inertia;
+          } else if (state.plant === "motor") {
+            position +=
+              ((1.5 * actuator - 0.8 * position + load) * dt) / state.inertia;
+          } else if (state.plant === "spring") {
+            velocity +=
+              ((0.9 * actuator -
+                state.damping * velocity -
+                state.stiffness * position +
+                load) *
+                dt) /
+              state.inertia;
+            position += velocity * dt;
+          }
+          if (position < 0 || position > 100) {
+            if (position > 100 || (position < 0 && t > 0.1)) boundaryHit = true;
+            position = Math.max(0, Math.min(100, position));
+            velocity = 0;
+          }
+          wheelAngle = (wheelAngle + position * dt * 6) % 360;
+          pumpAngle = (pumpAngle + Math.max(0, actuator) * dt * 9) % 360;
+          fanAngle = (fanAngle + Math.max(0, -actuator) * dt * 12) % 360;
+          priorError = err;
+          t += dt;
+          trace.push({
+            t,
+            measured,
+            load,
+            y: position,
+            u: effort,
+            s: state.setpoint,
+            p,
+            i,
+            d,
+            e: err,
+            memory: integral,
+            raw,
+            saturated: saturated(raw),
+            held,
+            capped,
+          });
+          if (trace.length > 1500) trace.shift();
+        }
+        function updateController() {
+          if (!state.iEnabled || state.ki === 0) integral = 0;
+          integral = Math.max(
+            -state.integralLimit,
+            Math.min(state.integralLimit, integral),
+          );
+          const err = state.setpoint - measured,
+            p = state.pEnabled
+              ? state.kp * (state.setpointWeight * state.setpoint - measured)
+              : 0,
+            i = state.iEnabled ? state.ki * integral : 0,
+            d = state.dEnabled ? state.kd * filteredD : 0,
+            raw = p + i + d;
+          controllerSnapshot = {
+            p,
+            i,
+            d,
+            e: err,
+            memory: integral,
+            raw,
+            saturated: saturated(raw),
+            held:
+              state.antiWindup &&
+              state.iEnabled &&
+              state.ki > 0 &&
+              ((raw >= state.power && err > 0) ||
+                (raw <= lowerLimit() && err < 0)),
+            capped: Math.abs(integral) >= state.integralLimit,
+          };
+          effort = limited(raw);
+        }
+        function updateLoad() {
+          const active =
+            state.eventEnabled &&
+            t + 1e-8 >= state.eventStart &&
+            t < state.eventStart + state.eventDuration - 1e-8;
+          const load = state.disturbance + (active ? state.eventLoad : 0);
+          if (lastLoad !== load) events.push({ t, label: "Load " + load });
+          lastLoad = load;
+        }
+        function showRunState() {
+          updateExperimentSaveState();
+          $("runTime").textContent = `${Math.min(24, t).toFixed(1)} / 24.0 s`;
+          $("runState").textContent = timer
+            ? "Running"
+            : t >= 23.99
+              ? runKind === "preview"
+                ? "Full preview"
+                : "Complete"
+              : "Paused";
+        }
+        function renderMachine() {
+          showRunState();
+          renderTerms();
+          let x = Math.max(0, Math.min(100, position)),
+            heat = state.plant === "heater";
+          $("carriage").setAttribute(
+            "transform",
+            `translate(${190 + x * 5.3},0)`,
+          );
+          $("sensorNow").textContent = measured.toFixed(1);
+          $("loadNow").textContent = (lastLoad || 0).toFixed(1);
+          $("eventStatus").textContent = state.eventEnabled
+            ? `Scheduled load ${state.eventLoad} from ${state.eventStart.toFixed(1)} s to ${Math.min(24, state.eventStart + state.eventDuration).toFixed(1)} s. Manual load adds to this.`
+            : "No timed disturbance. Use Apply load for a manual load.";
+          $("readout").textContent = x.toFixed(1) + "%";
+          $("effort").textContent = effort.toFixed(1) + "%";
+          $("delivered").textContent = actuator.toFixed(1) + "%";
+          $("motionName").textContent = heat ? "ACTUATOR STATE" : "VELOCITY";
+          $("motionValue").textContent = heat
+            ? actuator > 1
+              ? "HEATING"
+              : actuator < -1
+                ? "COOLING"
+                : "PASSIVE"
+            : velocity.toFixed(1) + " %/s";
+          $("rotor").setAttribute(
+            "transform",
+            `rotate(${reduceMotion ? 0 : x * 25},116,205)`,
+          );
+          $("thread").setAttribute(
+            "patternTransform",
+            `translate(${reduceMotion ? 0 : (x * 4) % 16},0)`,
+          );
+          $("mercury").setAttribute("y", String(251 - x * 1.5));
+          $("mercury").setAttribute("height", String(1 + x * 1.5));
+          $("heatGlow").setAttribute("opacity", String(x / 140));
+          $("coil").setAttribute(
+            "stroke",
+            actuator > 1
+              ? `rgb(${Math.round(140 + actuator)},${Math.round(70 + actuator * 0.8)},50)`
+              : "#675b50",
+          );
+          $("fan").setAttribute(
+            "transform",
+            `rotate(${reduceMotion ? 0 : fanAngle},410,175)`,
+          );
+          $("driveLed").setAttribute(
+            "fill",
+            Math.abs(actuator) > 1 ? "#d6f578" : "#5e704e",
+          );
+          renderNewMachine(x);
+          $("machine").setAttribute(
+            "aria-label",
+            `${plants[state.plant].name}: actual output ${x.toFixed(1)}, target ${state.setpoint}, delivered effort ${actuator.toFixed(1)} percent`,
+          );
+        }
+        function renderNewMachine(x) {
+          $("tankWater").setAttribute("y", String(283 - x * 1.76));
+          $("tankWater").setAttribute("height", String(x * 1.76));
+          $("waterSurface").setAttribute(
+            "transform",
+            `translate(0,${-x * 1.76})`,
+          );
+          $("inletFlow").setAttribute(
+            "opacity",
+            String(Math.max(0, actuator) / 100),
+          );
+          $("outletFlow").setAttribute(
+            "opacity",
+            String(Math.min(1, (state.drain * Math.sqrt(x)) / 20)),
+          );
+          for (let id of ["inletFlow", "outletFlow"])
+            $(id).setAttribute(
+              "stroke-dashoffset",
+              String(reduceMotion ? 0 : -t * 25),
+            );
+          $("pumpRotor").setAttribute(
+            "transform",
+            `rotate(${reduceMotion ? 0 : pumpAngle},129,244)`,
+          );
+          $("tankCondition").textContent =
+            x >= 99.99
+              ? "FULL · OVERFLOW DISCARDED"
+              : x <= 0.01
+                ? "EMPTY"
+                : actuator * 0.5 -
+                      state.drain * Math.sqrt(x) +
+                      (lastLoad || 0) >=
+                    0
+                  ? "LEVEL RISING"
+                  : "LEVEL FALLING";
+          $("flywheel").setAttribute(
+            "transform",
+            `rotate(${reduceMotion ? 0 : wheelAngle},381,199)`,
+          );
+          $("speedNeedle").setAttribute(
+            "transform",
+            `rotate(${x * 1.8},642,273)`,
+          );
+          $("brakePad").setAttribute(
+            "fill",
+            (lastLoad || 0) < 0 ? "#e9904d" : "#5d5144",
+          );
+          let massX = 205 + x * 4.8,
+            left = 70,
+            right = massX - 32,
+            span = right - left;
+          let points = `M${left} 190L${left + span * 0.09} 190`;
+          for (let n = 0; n < 12; n++)
+            points += `L${left + span * (0.13 + n * 0.063)} ${n % 2 ? 204 : 176}`;
+          points += `L${right - span * 0.08} 190H${right}`;
+          $("springCoil").setAttribute("d", points);
+          $("springMass").setAttribute("transform", `translate(${massX},0)`);
+          $("damperRod").setAttribute("d", `M119 248H${right}`);
+          $("forceArrow").setAttribute(
+            "transform",
+            actuator < 0 ? "translate(32,0) scale(-1,1)" : "",
+          );
+          $("forceArrow").setAttribute(
+            "opacity",
+            String(0.15 + 0.85 * Math.min(1, Math.abs(actuator) / 100)),
+          );
+          if (state.plant === "tank") {
+            $("motionName").textContent = "GRAVITY OUTFLOW";
+            $("motionValue").textContent =
+              (state.drain * Math.sqrt(x)).toFixed(1) + " units/s";
+          }
+          if (state.plant === "motor") {
+            $("motionName").textContent = "DRIVE STATE";
+            $("motionValue").textContent =
+              actuator > 1 ? "DRIVING" : actuator < -1 ? "BRAKING" : "COASTING";
+          }
+        }
+        function renderTerms() {
+          let sample = controllerSnapshot ||
+            trace.at(-1) || {
+              p: 0,
+              i: 0,
+              d: 0,
+              e: state.setpoint,
+              memory: 0,
+              raw: 0,
+            };
+          for (let k of ["p", "i", "d"]) {
+            $(k + "Term").textContent =
+              (sample[k] >= 0 ? "+" : "") + sample[k].toFixed(1) + "%";
+            $(k + "Meter").value = Math.max(-100, Math.min(100, sample[k]));
+            $(k + "Meter").title =
+              sample[k].toFixed(2) + "% (meter range ±100%)";
+          }
+          $("errorNow").textContent =
+            "Feedback error: " + (state.setpoint - measured).toFixed(1);
+          $("sumNow").textContent = "P + I + D: " + sample.raw.toFixed(1) + "%";
+          $("iMemory").textContent =
+            "Memory: " + sample.memory.toFixed(1) + " unit·s";
+          $("limitState").textContent = sample.saturated
+            ? `⚑ Saturated · ${lowerLimit()} to ${state.power}%`
+            : `✓ Drive range ${lowerLimit()} to ${state.power}%`;
+          $("integralState").textContent = !state.iEnabled
+            ? "I disabled · memory cleared."
+            : state.ki === 0
+              ? "I gain is zero · memory cleared."
+              : sample.held
+                ? "Anti-windup active · integration held because it would push farther into saturation."
+                : sample.capped
+                  ? `Integral memory limit reached (±${state.integralLimit} unit·s).`
+                  : state.antiWindup
+                    ? "Integral memory is accumulating or unwinding."
+                    : "Anti-windup off · memory can accumulate at saturation, within its cap.";
+        }
+        function drawTerms() {
+          let c = $("termChart"),
+            r = c.getBoundingClientRect(),
+            ratio = window.devicePixelRatio || 1;
+          if (r.width < 1) r = { width: 900, height: 220 };
+          c.width = Math.max(1, Math.round(r.width * ratio));
+          c.height = Math.round(r.height * ratio);
+          let ctx = c.getContext("2d");
+          ctx.scale(ratio, ratio);
+          let w = r.width,
+            h = r.height;
+          ctx.fillStyle = "#111b1e";
+          ctx.fillRect(0, 0, w, h);
+          let max = 20;
+          for (let p of trace)
+            for (let k of ["p", "i", "d"])
+              max = Math.max(max, Math.abs(p[k] || 0));
+          max = Math.ceil(max / 20) * 20;
+          ctx.font = "11px system-ui";
+          ctx.fillStyle = "#c8d8d4";
+          ctx.strokeStyle = "#355056";
+          for (let n of [-1, -0.5, 0, 0.5, 1]) {
+            let y = 18 + ((h - 45) * (1 - n)) / 2;
+            ctx.beginPath();
+            ctx.moveTo(48, y);
+            ctx.lineTo(w - 14, y);
+            ctx.stroke();
+            ctx.fillText(String(Math.round(max * n)), 4, y + 4);
+          }
+          for (let t = 0; t <= 24; t += 4)
+            ctx.fillText(t + "s", 48 + ((w - 68) * t) / 24 - 6, h - 6);
+          for (let [k, color, dash] of [
+            ["p", "#d6f578", []],
+            ["i", "#51d8ee", [7, 4]],
+            ["d", "#e5b5f2", [2, 4]],
+          ]) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.setLineDash(dash);
+            ctx.beginPath();
+            trace.forEach((p, j) => {
+              let x = 48 + ((w - 68) * p.t) / 24,
+                y = 18 + ((h - 45) * (1 - p[k] / max)) / 2;
+              j ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+            });
+            ctx.stroke();
+          }
+          ctx.setLineDash([]);
+        }
+        function line(ctx, data, fn, color, w, h, dash = []) {
+          if (!data?.length) return;
+          ctx.beginPath();
+          ctx.setLineDash(dash);
+          data.forEach((p, i) => {
+            let x = 42 + (w - 56) * (p.t / 24),
+              y =
+                h -
+                26 -
+                ((h - 42) * (Math.max(-100, Math.min(110, fn(p))) + 100)) / 210;
+            i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+          });
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2.5;
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+        function draw() {
+          drawTerms();
+          renderSample();
+          let c = $("chart"),
+            r = c.getBoundingClientRect(),
+            ratio = window.devicePixelRatio || 1;
+          c.width = Math.max(300, r.width * ratio);
+          c.height = r.height * ratio;
+          let ctx = c.getContext("2d");
+          ctx.scale(ratio, ratio);
+          let w = r.width,
+            h = r.height;
+          paintResponse(ctx, w, h, $("sampleInspector").open);
+        }
+        function paintResponse(ctx, w, h, showCursor = false) {
+          ctx.fillStyle = "#111b1e";
+          ctx.fillRect(0, 0, w, h);
+          ctx.font = "11px system-ui";
+          ctx.strokeStyle = "#355056";
+          ctx.fillStyle = "#b9cbc8";
+          for (let v = -100; v <= 100; v += 50) {
+            let y = h - 26 - ((h - 42) * (v + 100)) / 210;
+            ctx.beginPath();
+            ctx.moveTo(42, y);
+            ctx.lineTo(w - 14, y);
+            ctx.stroke();
+            ctx.fillText(v, 9, y + 4);
+          }
+          for (let s = 0; s <= 24; s += 4) {
+            let x = 42 + ((w - 56) * s) / 24;
+            ctx.beginPath();
+            ctx.moveTo(x, 10);
+            ctx.lineTo(x, h - 26);
+            ctx.stroke();
+            ctx.fillText(s + "s", x - 8, h - 8);
+          }
+          line(
+            ctx,
+            baselinePlant === state.plant ? baseline : null,
+            (p) => p.y,
+            "#e5b5f2",
+            w,
+            h,
+            [6, 4],
+          );
+          for (const { record, style } of visibleExperiments())
+            line(ctx, record.trace, (p) => p.y, style.color, w, h, style.dash);
+          line(ctx, trace, (p) => p.s, "#d6f578", w, h, [5, 4]);
+          line(ctx, trace, (p) => p.u, "#ff9a59", w, h);
+          line(ctx, trace, (p) => p.y, "#51d8ee", w, h);
+          line(ctx, trace, (p) => p.measured, "#ffffff", w, h, [2, 4]);
+          ctx.strokeStyle = "#ffcb6b";
+          ctx.fillStyle = "#ffcb6b";
+          ctx.font = "10px system-ui";
+          for (let event of events) {
+            let x = 42 + ((w - 56) * event.t) / 24;
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.moveTo(x, 12);
+            ctx.lineTo(x, h - 26);
+            ctx.stroke();
+            ctx.fillText(event.label, Math.min(x + 3, w - 75), 12);
+          }
+          ctx.setLineDash([]);
+          if (showCursor && trace.length) {
+            const sample = trace[inspectedIndex ?? trace.length - 1];
+            const x = 42 + ((w - 56) * sample.t) / 24;
+            ctx.strokeStyle = "#dceae6";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(x, 16);
+            ctx.lineTo(x, h - 26);
+            ctx.stroke();
+          }
+        }
+        function renderSample() {
+          const index = Math.min(
+            inspectedIndex ?? trace.length - 1,
+            trace.length - 1,
+          );
+          const sample = trace[index];
+          $("sampleTime").max = Math.max(0, trace.length - 1);
+          $("sampleTime").value = Math.max(0, index);
+          $("sampleTime").disabled = !sample;
+          $("latestSample").disabled = !sample;
+          $("exportCSV").disabled = !sample;
+          $("exportPNG").disabled = !sample;
+          $("sampleTimeValue").textContent = sample
+            ? sample.t.toFixed(2) + " s"
+            : "No samples yet";
+          $("sampleTime").setAttribute(
+            "aria-valuetext",
+            sample
+              ? `${sample.t.toFixed(2)} seconds; output ${sample.y.toFixed(2)} percent; target ${sample.s.toFixed(2)} percent; command ${sample.u.toFixed(2)} percent`
+              : "No samples yet",
+          );
+          if (!$("sampleInspector").open) return;
+          $("sampleValues").innerHTML = sample
+            ? [
+                ["Actual output", sample.y, "%"],
+                ["Target", sample.s, "%"],
+                ["Sensor feedback", sample.measured, "%"],
+                ["Drive command", sample.u, "%"],
+                ["P contribution", sample.p, "%"],
+                ["I contribution", sample.i, "%"],
+                ["D contribution", sample.d, "%"],
+                ["Feedback error", sample.e, " units"],
+                ["Applied load", sample.load, " units"],
+              ]
+                .map(
+                  ([label, value, unit]) =>
+                    `<div><dt>${label}</dt><dd>${(Math.abs(value) < 0.005 ? 0 : value).toFixed(2)}${unit}</dd></div>`,
+                )
+                .join("")
+            : "";
+          $("sampleState").textContent = sample
+            ? `${inspectedIndex === null ? "Following latest sample." : "Inspecting recorded sample."} ${sample.saturated ? "Command saturated." : "Command within range."}${sample.held ? " Anti-windup held integration." : ""}${sample.capped ? " Integral memory at cap." : ""}`
+            : "Start playback or use Reset run to record samples.";
+          const comparisons = sample
+            ? visibleExperiments().map(({ record, number }) => {
+                const point = record.trace[Math.round(sample.t / 0.02) - 1];
+                return `${number} · ${record.name}: ${point.y.toFixed(2)}% (target ${point.s}%)`;
+              })
+            : [];
+          $("sampleComparisons").hidden = !comparisons.length;
+          $("sampleComparisons").textContent = comparisons.length
+            ? "Saved outputs at this time · " + comparisons.join("; ")
+            : "";
+        }
+        function selectSample(index) {
+          if (!trace.length) return;
+          stop();
+          inspectedIndex = Math.max(
+            0,
+            Math.min(trace.length - 1, Math.round(index)),
+          );
+          $("sampleInspector").open = true;
+          draw();
+        }
+        function downloadBlob(blob, name) {
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = name;
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        }
+        function exportTrace() {
+          if (!trace.length) return;
+          stop();
+          const fields = [
+            "t",
+            "y",
+            "s",
+            "measured",
+            "u",
+            "p",
+            "i",
+            "d",
+            "e",
+            "load",
+            "memory",
+            "raw",
+            "saturated",
+            "held",
+            "capped",
+          ];
+          const rows = [
+            [
+              "model",
+              "recording",
+              "settings_changed",
+              "time_s",
+              "output_pct",
+              "target_pct",
+              "sensor_pct",
+              "command_pct",
+              "p_pct",
+              "i_pct",
+              "d_pct",
+              "feedback_error_units",
+              "load_units",
+              "integral_memory_unit_s",
+              "unclipped_command_pct",
+              "saturated",
+              "integration_held",
+              "memory_capped",
+            ],
+            ...trace.map((sample) => [
+              state.plant,
+              t >= 23.99 ? "complete" : "partial",
+              experimentChanged,
+              ...fields.map((k) =>
+                typeof sample[k] === "boolean"
+                  ? sample[k]
+                  : Number(sample[k].toFixed(9)),
+              ),
+            ]),
+          ];
+          downloadBlob(
+            new Blob([rows.map((row) => row.join(",")).join("\r\n") + "\r\n"], {
+              type: "text/csv;charset=utf-8",
+            }),
+            `looplab-${state.plant}-trace.csv`,
+          );
+          tell(
+            `Exported ${trace.length} samples through ${t.toFixed(2)} s. CSV contains the current recording; JSON keeps saved experiments and settings.`,
+          );
+        }
+        function exportChart() {
+          if (!trace.length) return;
+          stop();
+          const legend = [
+            { label: "Target", color: "#d6f578", dash: [5, 4] },
+            { label: "Actual output", color: "#51d8ee", dash: [] },
+            { label: "Sensor feedback", color: "#ffffff", dash: [2, 4] },
+            { label: "Drive command", color: "#ff9a59", dash: [] },
+          ];
+          if (baseline && baselinePlant === state.plant)
+            legend.push({
+              label: "Pinned baseline · actual output",
+              color: "#e5b5f2",
+              dash: [6, 4],
+            });
+          for (const { record, style, number } of visibleExperiments())
+            legend.push({
+              ...style,
+              label: `${number} · ${record.name} · output · target ${record.state.setpoint}%`,
+            });
+          const canvas = document.createElement("canvas");
+          canvas.width = 1440;
+          canvas.height = 705 + legend.length * 28;
+          const ctx = canvas.getContext("2d");
+          ctx.fillStyle = "#111b1e";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.fillStyle = "#dceae6";
+          ctx.font = "600 28px system-ui";
+          ctx.fillText(`LOOPLAB · ${plants[state.plant].name}`, 32, 46);
+          ctx.font = "16px system-ui";
+          ctx.fillText(
+            `${t >= 23.99 ? "Complete" : "Partial"} recording · ${t.toFixed(2)} / 24 s · ${experimentChanged ? "Settings changed during recording" : "Fixed settings"}${boundaryHit ? " · Model boundary reached" : ""} · v1.0.0-rc.1`,
+            32,
+            78,
+          );
+          ctx.fillText(
+            "Normalized output and drive command (%) versus time (s)",
+            32,
+            106,
+          );
+          ctx.save();
+          ctx.translate(32, 125);
+          paintResponse(ctx, 1376, 460);
+          ctx.restore();
+          legend.forEach((item, index) => {
+            const y = 613 + index * 28;
+            ctx.strokeStyle = item.color;
+            ctx.lineWidth = 3;
+            ctx.setLineDash(item.dash);
+            ctx.beginPath();
+            ctx.moveTo(34, y - 5);
+            ctx.lineTo(82, y - 5);
+            ctx.stroke();
+            ctx.fillStyle = "#dceae6";
+            ctx.font = "16px system-ui";
+            ctx.fillText(item.label, 96, y, 1300);
+          });
+          ctx.setLineDash([]);
+          ctx.fillStyle = "#b9cbc8";
+          ctx.font = "15px system-ui";
+          ctx.fillText(
+            `Final setup · Target ${state.setpoint}% · P ${state.kp}${state.pEnabled ? "" : " (off)"} / I ${state.ki}${state.iEnabled ? "" : " (off)"} / D ${state.kd}${state.dEnabled ? "" : " (off)"}`,
+            32,
+            canvas.height - 83,
+          );
+          ctx.fillText(
+            "P/I/D contributions and full sample data: Trace CSV. Settings and saved experiments: Export JSON.",
+            32,
+            canvas.height - 57,
+          );
+          ctx.fillText(
+            "Educational model · 0.02 s timestep · Output and command axes are clipped to −100…110%. Sensor values may exceed this range.",
+            32,
+            canvas.height - 30,
+          );
+          const filename = `looplab-${state.plant}-chart.png`;
+          canvas.toBlob((blob) => {
+            if (blob) downloadBlob(blob, filename);
+            else tell("Chart image could not be created. Try Print / PDF.");
+          }, "image/png");
+        }
+        function metrics() {
+          if (!trace.length) return;
+          renderLessonResult();
+          renderComparisonTable();
+          if (experimentChanged || state.eventEnabled) {
+            for (let id of ["overshoot", "rise", "settle"])
+              $(id).textContent = "Mixed run";
+            $("error").textContent = Math.abs(
+              position - state.setpoint,
+            ).toFixed(1);
+            $("interpretation").textContent =
+              "This run includes a timed event or live changes. Disable timed events and restart for comparable step metrics.";
+            if (boundaryHit)
+              $("interpretation").textContent +=
+                " The process also reached a model boundary; range limits are constraining this response.";
+            return;
+          }
+          let set = state.setpoint,
+            peak = Math.max(...trace.map((p) => p.y)),
+            rise10 = trace.find((p) => p.y >= set * 0.1)?.t,
+            rise90 = trace.find((p) => p.y >= set * 0.9)?.t,
+            settle = null;
+          let lastOutside = -1;
+          for (let i = 0; i < trace.length; i++)
+            if (Math.abs(trace[i].y - set) > Math.max(0.5, set * 0.02))
+              lastOutside = i;
+          let entry = trace[lastOutside + 1];
+          if (entry && trace.at(-1).t - entry.t >= 1) settle = entry.t;
+          $("overshoot").textContent =
+            Math.max(0, ((peak - set) / set) * 100).toFixed(1) + "%";
+          $("rise").textContent =
+            rise90 == null ? "—" : (rise90 - (rise10 || 0)).toFixed(1) + " s";
+          $("settle").textContent =
+            settle == null ? "Not settled" : settle.toFixed(1) + " s";
+          $("error").textContent = Math.abs(trace.at(-1).y - set).toFixed(1);
+          let reason =
+            peak > set * 1.1
+              ? "The output overshoots the target; try more D or less P."
+              : settle == null
+                ? t < 23.99
+                  ? "Response in progress; settling is not established yet."
+                  : "Not settled by the end of this 24-second run."
+                : "The system approaches the target with limited overshoot.";
+          if (boundaryHit)
+            reason =
+              "The process reached a model boundary. End stops or range limits are constraining the response.";
+          $("interpretation").textContent = reason;
+          if (t < 23.99 && settle !== null)
+            $("interpretation").textContent +=
+              " Settling is provisional while the run is still in progress.";
+          if (t < 23.99)
+            $("settle").textContent =
+              settle === null ? "Pending" : settle.toFixed(1) + " s*";
+        }
+        function stop() {
+          if (timer) {
+            clearInterval(timer);
+            timer = null;
+          }
+          $("play").textContent = t >= 23.99 ? "▶ Replay" : "▶ Resume";
+          showRunState();
+        }
+        function run() {
+          runKind = "preview";
+          stop();
+          resetSimulation();
+          stop();
+        }
+        function handleEdit(k, value) {
+          if (k !== "theme") state.lessonId = "none";
+          state[k] = value;
+          sync();
+          save();
+          if (k === "theme") {
+            draw();
+            return;
+          }
+          if (k === "plant" || k.startsWith("event") || t >= 23.99) {
+            run();
+            return;
+          }
+          experimentChanged = true;
+          updateController();
+          renderMachine();
+          draw();
+          metrics();
+        }
+        for (const k of [
+          "plant",
+          "setpoint",
+          "theme",
+          ...defs.map((d) => d[0]),
+        ])
+          $(k).addEventListener("input", (e) =>
+            handleEdit(
+              k,
+              ["plant", "theme"].includes(k)
+                ? e.target.value
+                : Number(e.target.value),
+            ),
+          );
+        for (const k of ["pEnabled", "iEnabled", "dEnabled", "antiWindup"])
+          $(k).onchange = () => {
+            state.lessonId = "none";
+            state[k] = $(k).checked;
+            sync();
+            save();
+            if (t >= 23.99) run();
+            else {
+              experimentChanged = true;
+              updateController();
+              renderMachine();
+              draw();
+              metrics();
+            }
+          };
+        $("eventEnabled").onchange = () => {
+          state.lessonId = "none";
+          state.eventEnabled = $("eventEnabled").checked;
+          sync();
+          save();
+          run();
+        };
+        function loadStarter() {
+          Object.assign(state, {
+            ...plants[state.plant].preset,
+            lessonId: "none",
+            derivativeFilter: defaults.derivativeFilter,
+            setpointWeight: defaults.setpointWeight,
+            integralLimit: defaults.integralLimit,
+            antiWindup: true,
+            setpoint: 70,
+            noise: 0,
+            delay: 0,
+            power: 100,
+            disturbance: 0,
+            eventEnabled: false,
+            pEnabled: true,
+            iEnabled: true,
+            dEnabled: true,
+          });
+          sync();
+          $("disturb").textContent = "Apply load";
+          save();
+          run();
+        }
+        $("starter").onclick = loadStarter;
+        function setMode(mode) {
+          state.mode = mode;
+          sync();
+          save();
+          draw();
+        }
+        $("easyMode").onclick = () => setMode("easy");
+        $("advancedMode").onclick = () => setMode("advanced");
+        function describeLesson() {
+          $("lessonDescription").textContent =
+            lessons[$("lessonSelect").value].description;
+        }
+        $("lessonSelect").value =
+          state.lessonId === "none" ? "p" : state.lessonId;
+        $("lessonSelect").onchange = describeLesson;
+        describeLesson();
+        $("loadLesson").onclick = () => {
+          const id = $("lessonSelect").value,
+            lesson = lessons[id];
+          lessonUndo = { state: { ...state }, baseline, baselinePlant };
+          stop();
+          state = {
+            ...defaults,
+            mode: state.mode,
+            theme: state.theme,
+            plant: lesson.plant,
+            ...plants[lesson.plant].preset,
+          };
+          if (id === "p") {
+            state.ki = 0;
+            state.kd = 0;
+          }
+          if (id === "d") {
+            state.kp = 0.8;
+            state.ki = 0.1;
+          }
+          state[lesson.gain] = lesson.before;
+          run();
+          baseline = trace.map((p) => ({ ...p }));
+          baselinePlant = state.plant;
+          state[lesson.gain] = lesson.after;
+          state.lessonId = id;
+          sync();
+          run();
+          save();
+        };
+        $("undoLesson").onclick = () => {
+          if (!lessonUndo) return;
+          stop();
+          ({ state, baseline, baselinePlant } = lessonUndo);
+          lessonUndo = null;
+          sync();
+          run();
+          save();
+        };
+        function renderLessonResult() {
+          const lesson = lessons[state.lessonId];
+          const visible =
+            !!lesson && !!baseline && baselinePlant === state.plant;
+          $("lessonResult").hidden = !visible;
+          if (!visible) return;
+          $("lessonResultTitle").textContent = lesson.title;
+          if (t < 23.99) {
+            $("lessonResultText").textContent =
+              "Replay in progress. Compare the cyan output with the dashed purple baseline; the numerical comparison appears at the end.";
+            return;
+          }
+          const beforeError = Math.abs(baseline.at(-1).y - baseline.at(-1).s),
+            afterError = Math.abs(position - state.setpoint);
+          const beforePeak = Math.max(...baseline.map((p) => p.y)),
+            afterPeak = Math.max(...trace.map((p) => p.y));
+          $("lessonResultText").textContent =
+            `${lesson.gain.slice(1).toUpperCase()} ${lesson.before} → ${lesson.after}. Error at 24 s: ${beforeError.toFixed(1)} → ${afterError.toFixed(1)} units. Peak output: ${beforePeak.toFixed(1)} → ${afterPeak.toFixed(1)}%. ${lesson.takeaway}`;
+        }
+        $("step").onclick = run;
+        $("play").onclick = () => {
+          if (timer) {
+            stop();
+            return;
+          }
+          if (t >= 23.99) clearSimulation();
+          runKind = "live";
+          $("play").textContent = "Ⅱ Pause";
+          let accumulator = 0,
+            lastTick = window.performance?.now();
+          timer = setInterval(() => {
+            const now = window.performance?.now();
+            const elapsed =
+              now === undefined ? 0.02 : Math.min(0.1, (now - lastTick) / 1000);
+            lastTick = now;
+            accumulator += elapsed * Number($("speed").value);
+            while (accumulator >= 0.02 && t < 23.99) {
+              advance(0.02);
+              accumulator -= 0.02;
+            }
+            renderMachine();
+            draw();
+            metrics();
+            if (t >= 23.99) stop();
+          }, 20);
+          showRunState();
+        };
+        $("baseline").onclick = () => {
+          state.lessonId = "none";
+          baseline = baseline ? null : trace.map((p) => ({ ...p }));
+          baselinePlant = baseline ? state.plant : null;
+          sync();
+          save();
+          draw();
+          renderLessonResult();
+        };
+        $("disturb").onclick = () => {
+          state.lessonId = "none";
+          state.disturbance = state.disturbance === -12 ? 0 : -12;
+          sync();
+          save();
+          if (t >= 23.99) run();
+          else {
+            experimentChanged = true;
+            updateLoad();
+            renderMachine();
+            draw();
+            metrics();
+          }
+        };
+        $("reset").onclick = () => {
+          if (
+            !confirm(
+              "Restore default settings and clear the pinned baseline and all saved experiments? Export JSON first if you want a backup.",
+            )
+          )
+            return;
+          const kept = keepCheckpoint("Fresh start");
+          state = { ...defaults };
+          experiments = [];
+          deletedExperiment = null;
+          $("experimentName").value = "";
+          lessonUndo = null;
+          baseline = null;
+          baselinePlant = null;
+          sync();
+          $("disturb").textContent = "Apply load";
+          save();
+          run();
+          tell(
+            `Fresh start ready. Restore checkpoint in Project brings back the previous setup and shelf.${kept ? "" : " The checkpoint could not be saved to browser storage and is available only in this tab."}`,
+          );
+        };
+        $("restoreCheckpoint").onclick = () => {
+          if (!checkpoint) return;
+          const next = validateProject(checkpoint.project);
+          stop();
+          const kept = keepCheckpoint("checkpoint restore");
+          state = next.state;
+          baseline = next.baseline;
+          baselinePlant = next.baselinePlant;
+          experiments = next.experiments;
+          deletedExperiment = null;
+          lessonUndo = null;
+          $("experimentName").value = "";
+          $("lessonSelect").value =
+            state.lessonId === "none" ? "p" : state.lessonId;
+          describeLesson();
+          sync();
+          save();
+          run();
+          tell(
+            `Checkpoint restored as a full preview. Restore checkpoint again to return to the setup you just left.${kept ? "" : " The return checkpoint is available only in this tab; browser storage is unavailable."}`,
+          );
+        };
+        $("export").onclick = () => {
+          let blob = new Blob([JSON.stringify(projectPayload(), null, 2)], {
+              type: "application/json",
+            }),
+            a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = "looplab-project.json";
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        };
+        $("importButton").onclick = () => $("importFile").click();
+        $("importFile").onchange = async (e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          try {
+            if (file.size > 8 * 1024 * 1024)
+              throw Error("Project is too large (maximum 8 MB).");
+            const imported = JSON.parse(await file.text());
+            const next = validateProject(imported);
+            stop();
+            const kept = keepCheckpoint("import");
+            state = next.state;
+            baseline = next.baseline;
+            baselinePlant = next.baselinePlant;
+            if (imported.version === 4) experiments = next.experiments;
+            deletedExperiment = null;
+            lessonUndo = null;
+            $("lessonSelect").value =
+              state.lessonId === "none" ? "p" : state.lessonId;
+            describeLesson();
+            sync();
+            save();
+            run();
+            tell(
+              (imported.version === 4
+                ? "Project imported, including its experiment shelf."
+                : "Earlier project imported. Your saved experiment shelf was retained.") +
+                ` Restore checkpoint in Project brings back your previous setup.${kept ? "" : " The checkpoint is available only in this tab; browser storage is unavailable."}`,
+            );
+          } catch (error) {
+            tell(
+              "Import rejected: " +
+                error.message +
+                " Your current experiment is unchanged.",
+            );
+          }
+          e.target.value = "";
+        };
+        $("dismissNotice").onclick = () => {
+          $("notice").hidden = true;
+        };
+        $("recovery").onclick = () => {
+          if (!recoveryText) return;
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(
+            new Blob([recoveryText], { type: "application/json" }),
+          );
+          a.download = "looplab-recovery.json";
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        };
+        $("experimentsPanel").addEventListener("toggle", renderComparisonTable);
+        $("experimentForm").onsubmit = saveExperiment;
+        $("experimentList").addEventListener("change", changeExperiment);
+        $("experimentList").addEventListener("click", clickExperiment);
+        $("undoDelete").onclick = undoExperimentDelete;
+        $("inspector").addEventListener("toggle", () => {
+          if ($("inspector").open) draw();
+        });
+        $("tuningPanel").addEventListener("toggle", draw);
+        $("sampleInspector").addEventListener("toggle", draw);
+        $("sampleTime").addEventListener("input", (e) =>
+          selectSample(Number(e.target.value)),
+        );
+        $("latestSample").onclick = () => {
+          inspectedIndex = null;
+          draw();
+        };
+        $("chart").addEventListener("click", (e) => {
+          const r = $("chart").getBoundingClientRect();
+          const time = ((e.clientX - r.left - 42) / (r.width - 56)) * 24;
+          selectSample(time / 0.02 - 1);
+          $("sampleTime").focus();
+        });
+        $("exportCSV").onclick = exportTrace;
+        $("exportPNG").onclick = exportChart;
+        function openHelp() {
+          stop();
+          $("helpDialog").showModal();
+        }
+        $("openHelp").onclick = openHelp;
+        $("tuningHelp").onclick = openHelp;
+        $("helpExamples").onclick = () => {
+          $("helpDialog").close();
+          $("projectMenu").open = false;
+          $("easyMode").click();
+          $("tuningPanel").open = true;
+          $("guidePanel").open = true;
+          $("lessonSelect").focus();
+        };
+        $("projectMenu").addEventListener("keydown", (e) => {
+          if (e.key === "Escape") {
+            $("projectMenu").open = false;
+            $("projectMenu").querySelector("summary").focus();
+          }
+        });
+        window.addEventListener("pagehide", flushSave);
+        document.addEventListener?.("visibilitychange", () => {
+          if (document.hidden) flushSave();
+          if (document.hidden && timer) {
+            stop();
+            tell(
+              "Playback paused while this tab was in the background. Resume when ready.",
+            );
+          }
+        });
+        if (window.matchMedia?.("(max-width: 760px)").matches)
+          $("tuningPanel").open = false;
+        $("report").onclick = () => {
+          stop();
+          draw();
+          metrics();
+          let report = window.open("", "_blank");
+          if (!report) {
+            alert("Allow popups to print the report.");
+            return;
+          }
+          let img = $("chart").toDataURL(),
+            termsImg = $("termChart").toDataURL();
+          report.document.write(
+            `<title>LOOPLAB experiment report</title><style>body{font:16px system-ui;max-width:800px;margin:40px auto;color:#172527}img{width:100%}table{border-collapse:collapse;width:100%}td,th{border:1px solid #aaa;padding:8px;text-align:left;overflow-wrap:anywhere}@media print{button{display:none}body{margin:0;max-width:none}table{font-size:12px}h2{break-after:avoid}img,tr{break-inside:avoid}}@page{size:A4;margin:16mm}</style><h1>LOOPLAB · PID experiment</h1><p>${new Date().toLocaleString()} · v1.0.0-rc.1 · Educational simulation</p><p>Recording: ${t.toFixed(2)} of 24 seconds. ${experimentChanged ? "Settings changed during this recording; the setup below shows the final values, not a constant configuration." : "Fixed settings for this recording."}</p><h2>Setup</h2><table><tr><th>System</th><td>${plants[state.plant].name}</td></tr><tr><th>Setpoint</th><td>${state.setpoint}</td></tr><tr><th>P / I / D</th><td>${state.kp} / ${state.ki} / ${state.kd}</td></tr><tr><th>Enabled P / I / D</th><td>${state.pEnabled} / ${state.iEnabled} / ${state.dEnabled}</td></tr><tr><th>Derivative filter / P setpoint weight</th><td>${state.derivativeFilter} s / ${state.setpointWeight}</td></tr><tr><th>Integral cap / anti-windup</th><td>±${state.integralLimit} unit·s / ${state.antiWindup ? "On" : "Off"}</td></tr><tr><th>Inertia / lag</th><td>${state.inertia} / ${state.lag}</td></tr><tr><th>Model details</th><td>${plants[state.plant].assumptions}</td></tr><tr><th>Stiffness / damping / drain</th><td>${state.stiffness} / ${state.damping} / ${state.drain} (where applicable)</td></tr><tr><th>Noise / delay / power</th><td>±${state.noise} / ${state.delay} s / ${state.power}%</td></tr><tr><th>Timed load</th><td>${state.eventEnabled ? `${state.eventLoad} at ${state.eventStart}s for ${state.eventDuration}s` : "Off"}</td></tr><tr><th>Disturbance</th><td>${state.disturbance}</td></tr></table><h2>Response</h2><img src="${img}" alt="PID response plot"><p>Target: dashed green. Actual output: cyan. Sensor feedback: dotted white. Drive command: orange. Baseline: dashed purple (same system only). Axes: normalized process output and drive command (%) versus time (s).</p><p>Overshoot: ${$("overshoot").textContent}; rise: ${$("rise").textContent}; settling: ${$("settle").textContent}; final error: ${$("error").textContent}.</p>${state.lessonId !== "none" && baseline && baselinePlant === state.plant ? `<p>${$("lessonResultText").textContent}</p>` : ""}<p>${html($("interpretation").textContent)}</p>${comparisonReport()}<h2>Controller contributions</h2><img src="${termsImg}" alt="P, I, D contribution traces"><p>P: solid green; I: dashed cyan; D: dotted purple. Contribution axes auto-scale.</p><p>Assumptions: normalized educational plant, ${state.plant === "tank" ? "unidirectional pump command" : "symmetric actuator command"} saturation, configurable integral limits and anti-windup, fixed 0.02 s timestep. Simulation does not validate a physical controller.</p><button onclick="print()">Print / save PDF</button>`,
+          );
+          report.document.close();
+        };
+        window.addEventListener("resize", draw);
+        sync();
+        $("disturb").textContent = state.disturbance
+          ? "Remove load"
+          : "Apply load";
+        run();
+      })();
+    </script>
+  </body>
+</html>
